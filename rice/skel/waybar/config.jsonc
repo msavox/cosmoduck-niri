@@ -1,0 +1,162 @@
+// Top bar Waybar per niri.
+// Avviata da niri con:  waybar -c ~/.config/waybar/config.jsonc -s ~/.config/waybar/style.css
+{
+  "layer": "top",
+  "position": "top",
+  "height": 30,
+  "spacing": 10,
+  "margin-top": 8,
+  "margin-left": 12,
+  "margin-right": 12,
+
+  "modules-left":   ["custom/ubuntu", "custom/niri-workspaces", "custom/niri-window"],
+  "modules-center": ["clock"],
+  "modules-right":  ["custom/layout", "custom/tray-toggle", "custom/notification", "pulseaudio", "bluetooth", "network", "cpu", "memory", "custom/conky", "custom/lid", "battery", "custom/power"],
+
+  "custom/app-menu": {
+    "format": "󱗼",
+    "tooltip-format": "Ulauncher (Ctrl+Space / Mod+D)",
+    "on-click":       "ulauncher-toggle"
+  },
+
+  "custom/ubuntu": {
+    "format": "",
+    "tooltip-format": "Ubuntu",
+    "on-click": "ulauncher-toggle"
+  },
+
+  "custom/power": {
+    "format": "⏻",
+    "tooltip-format": "Power menu",
+    "on-click": "__HOME__/.config/waybar/power-menu.sh"
+  },
+
+  "custom/layout": {
+    "exec": "__HOME__/.config/waybar/niri-layout.sh",
+    "interval": 2,
+    "return-type": "json",
+    "tooltip": true,
+    "on-click":       "niri msg action switch-layout next",
+    "on-click-right": "niri msg action switch-layout prev"
+  },
+
+  "custom/niri-workspaces": {
+    "exec": "__HOME__/.config/waybar/niri-workspaces.sh",
+    "interval": 1,
+    "return-type": "json",
+    "tooltip": true,
+    "on-click":        "niri msg action toggle-overview",
+    "on-click-right":  "niri msg action focus-workspace-previous",
+    "on-scroll-up":    "niri msg action focus-workspace-up",
+    "on-scroll-down":  "niri msg action focus-workspace-down"
+  },
+
+  "custom/niri-window": {
+    "exec": "__HOME__/.config/waybar/niri-window.sh",
+    "interval": 1,
+    "return-type": "json",
+    "max-length": 80,
+    "tooltip": true,
+    "on-click":        "niri msg action maximize-column",
+    "on-click-right":  "niri msg action close-window"
+  },
+
+  "custom/conky": {
+    "exec": "__HOME__/.config/niri/conky-toggle.sh status",
+    "interval": 3,
+    "return-type": "json",
+    "tooltip": true,
+    "on-click": "__HOME__/.config/niri/conky-toggle.sh toggle"
+  },
+
+  "custom/lid": {
+    "exec": "__HOME__/.config/waybar/lid-status.sh",
+    "interval": 2,
+    "return-type": "json",
+    "tooltip": true,
+    "on-click": "__HOME__/.local/bin/lid-keep-awake toggle"
+  },
+
+  "clock": {
+    "format": "{:%a %d %b  %H:%M}",
+    "tooltip": false,
+    "on-click": "/usr/bin/python3 __HOME__/.config/waybar/calendar-popup.py"
+  },
+
+  "custom/tray-toggle": {
+    "format": "",
+    "tooltip": false,
+    "on-click": "/usr/bin/python3 __HOME__/.config/waybar/tray-dropdown.py"
+  },
+
+    "custom/notification": {
+    "tooltip": false,
+    "format": "{icon}  {}",
+    "format-icons": {
+      "notification": "",
+      "none": "",
+      "dnd-notification": "",
+      "dnd-none": ""
+    },
+    "return-type": "json",
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw",
+    "escape": true
+  },
+
+"tray": {
+    "icon-size": 18,
+    "spacing": 8,
+    "show-passive-items": true
+  },
+
+  "pulseaudio": {
+    "format": "{icon}  {volume}%",
+    "format-muted": "󰝟  muted",
+    "format-icons": ["󰕿", "󰖀", "󰕾"],
+    "on-click":        "gnome-control-center sound",
+    "on-click-right":  "pavucontrol",
+    "on-click-middle": "__HOME__/.config/waybar/volume-slider.sh",
+    "on-scroll-up":    "/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ +5%",
+    "on-scroll-down":  "/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ -5%"
+  },
+
+  "bluetooth": {
+    "format": "󰂯",
+    "format-disabled": "󰂲",
+    "format-connected": "󰂱  {num_connections}",
+    "on-click":       "gnome-control-center bluetooth",
+    "on-click-right": "rfkill toggle bluetooth"
+  },
+
+  "network": {
+    "format-wifi": "󰖩  {essid}",
+    "format-ethernet": "󰈁  {ifname}",
+    "format-disconnected": "󰖪  offline",
+    "tooltip-format": "{ifname}: {ipaddr}/{cidr}",
+    "on-click":        "gnome-control-center wifi",
+    "on-click-right":  "nm-connection-editor"
+  },
+
+  "cpu": {
+    "format": "󰻠  {usage}%",
+    "tooltip": true,
+    "on-click": "ghostty -e btop"
+  },
+
+  "memory": {
+    "format": "󰍛  {used:0.1f}G",
+    "tooltip": true,
+    "on-click": "ghostty -e btop"
+  },
+
+  "battery": {
+    "format": "{icon}  {capacity}%",
+    "format-charging": "󰂄  {capacity}%",
+    "format-icons": ["󰂎", "󰁺", "󰁼", "󰁾", "󰂁", "󰁹"],
+    "states": { "warning": 25, "critical": 10 },
+    "on-click": "sh -c 'command -v gnome-power-statistics >/dev/null && gnome-power-statistics || notify-send \"Batteria\" \"$(acpi 2>/dev/null || upower -i $(upower -e | grep BAT) | head -20)\"'"
+  }
+}

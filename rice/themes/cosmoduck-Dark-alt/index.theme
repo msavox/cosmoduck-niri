@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=cosmoduck-Dark-alt
+Comment=A MacOS BigSur like Gtk+ theme based on Elegant Design
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+GtkTheme=cosmoduck-Dark-alt
+MetacityTheme=cosmoduck-Dark-alt
+IconTheme=cosmoduck-Dark
+CursorTheme=WhiteSur-cursors
+ButtonLayout=close,minimize,maximize:menu
+

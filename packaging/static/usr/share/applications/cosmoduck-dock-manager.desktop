@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Dock Setup (Cosmoduck)
+Comment=Add/remove/reorder the waybar dock apps
+Exec=sh -c 'python3 "$HOME/.config/waybar/dock-manager.py"'
+Icon=preferences-system
+Terminal=false
+Categories=Settings;Utility;
+StartupWMClass=dock-manager.py

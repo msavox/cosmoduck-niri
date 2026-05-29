@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# cosmoduck-niri-setup — installs the per-user config for the current user.
+# Run once per user (NOT as root). Backs up any existing config.
+set -euo pipefail
+
+if [ "$(id -u)" -eq 0 ]; then
+  echo "Run as a normal user, NOT with sudo/root." >&2
+  exit 1
+fi
+
+SKEL="/usr/share/cosmoduck-niri/skel"
+CFG="$HOME/.config"
+TS="$(date +%Y%m%d-%H%M%S)"
+
+echo ">> Installing the Cosmoduck-niri config for user $USER"
+
+# 1. config dirs (backup existing)
+for d in niri waybar swaync conky; do
+  if [ -e "$CFG/$d" ]; then
+    mv "$CFG/$d" "$CFG/$d.bak-$TS"
+    echo "   backup: ~/.config/$d -> $d.bak-$TS"
+  fi
+  install -d "$CFG/$d"
+  cp -a "$SKEL/$d/." "$CFG/$d/"
+done
+
+# 2. lid keep-awake: script + user systemd unit
+install -d "$HOME/.local/bin" "$CFG/systemd/user"
+install -m755 "$SKEL/bin/lid-keep-awake"                "$HOME/.local/bin/lid-keep-awake"
+install -m644 "$SKEL/systemd-user/lid-keep-awake.service" "$CFG/systemd/user/lid-keep-awake.service"
+
+# 3. substitute the __HOME__ placeholder with the real home in every text file
+TARGETS="$CFG/niri $CFG/waybar $CFG/swaync $CFG/conky $HOME/.local/bin/lid-keep-awake $CFG/systemd/user/lid-keep-awake.service"
+grep -rIl '__HOME__' $TARGETS 2>/dev/null | while read -r f; do
+  sed -i "s#__HOME__#$HOME#g" "$f"
+done
+
+# 4. make scripts executable
+find "$CFG/niri" "$CFG/waybar" -type f \( -name '*.sh' -o -name '*.py' \) -exec chmod 755 {} + 2>/dev/null || true
+find "$CFG/conky/Regulus-MOD-Cosmoduck/scripts" -type f -exec chmod 755 {} + 2>/dev/null || true
+
+# 5. theme / icons / cursor (best-effort; needs a dbus session)
+if command -v gsettings >/dev/null 2>&1; then
+  gsettings set org.gnome.desktop.interface gtk-theme    'cosmoduck-Dark'        2>/dev/null || true
+  gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'          2>/dev/null || true
+  gsettings set org.gnome.desktop.interface cursor-theme 'Bibata-Modern-Classic' 2>/dev/null || true
+fi
+
+# 6. enable lid keep-awake unit + reload user systemd (best-effort)
+/usr/bin/systemctl --user daemon-reload 2>/dev/null || true
+
+# 7. generate the dock CSS for the LOCAL icon theme (no waybar reload here)
+bash "$CFG/waybar/dock-gen.sh" --no-reload 2>/dev/null || true
+
+cat <<EOF
+
+Done.
+  - At the login screen, pick the 'niri' session.
+  - Conky weather: put YOUR free OpenWeatherMap API key and your city in
+    ~/.config/conky/Regulus-MOD-Cosmoduck/scripts/weather-v2.0.sh
+  - Tray: ☕ = lid keep-awake (stay awake with the lid closed),
+    the eye = show/hide the conky widget.
+  - Monitors: run nwg-displays to configure and save ~/.config/niri/monitor.kdl
+EOF

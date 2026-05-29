@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+  remove|purge)
+    rm -f /etc/ld.so.conf.d/cosmoduck-niri.conf
+    ldconfig 2>/dev/null || true
+    ;;
+esac
+
+exit 0

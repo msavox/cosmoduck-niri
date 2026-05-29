@@ -1,0 +1,121 @@
+/* Top bar style — palette Catppuccin Macchiato */
+* {
+  font-family: "Inter", "Roboto", "Ubuntu", "CaskaydiaCove Nerd Font", "Noto Sans", sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  min-height: 0;
+}
+
+window#waybar {
+  background: transparent;
+  color: #cad3f5;
+  border: none;
+}
+
+.modules-left,
+.modules-center,
+.modules-right {
+  background: rgba(30, 30, 46, 0.85);
+  border: 1px solid #494d64;
+  border-radius: 16px;
+  padding: 0 6px;
+  margin: 0 2px;
+}
+
+#custom-app-menu,
+#custom-ubuntu,
+#custom-niri-workspaces,
+#custom-niri-window,
+#custom-layout,
+#custom-power,
+#clock,
+#tray,
+#pulseaudio,
+#bluetooth,
+#network,
+#cpu,
+#memory,
+#battery {
+  padding: 0 10px;
+  margin: 2px 1px;
+  border-radius: 12px;
+  background: transparent;
+}
+
+.modules-right #custom-layout,
+.modules-right #tray,
+.modules-right #pulseaudio,
+.modules-right #bluetooth,
+.modules-right #network,
+.modules-right #cpu,
+.modules-right #memory,
+.modules-right #battery,
+.modules-right #custom-power {
+  padding: 0 6px;
+  margin: 2px -2px;
+}
+
+#pulseaudio:hover, #bluetooth:hover, #network:hover,
+#cpu:hover, #memory:hover, #battery:hover,
+#custom-layout:hover, #custom-power:hover, #custom-app-menu:hover,
+#clock:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+#tray { background: transparent; }
+
+#custom-tray-toggle {
+  padding: 0 8px;
+  margin: 0 2px;
+  color: #6e738d;
+  font-size: 14px;
+  transition: color 120ms ease;
+}
+#custom-tray-toggle:hover { color: #cad3f5; }
+/* The tray toggle is handled by tray-toggle.sh:
+ * the script edits modules-right and reloads waybar via SIGUSR2 (the CSS
+ * sibling selector does not work in the waybar 0.9.9 widget tree). */
+
+#custom-app-menu        { color: #cad3f5; font-size: 16px; }
+#custom-ubuntu          {
+  color: #e8eaed;
+  font-size: 16px;
+  padding: 0 8px;
+  font-family: "CaskaydiaCove NF", "Symbols Nerd Font", "Noto Color Emoji", monospace;
+}
+#custom-ubuntu:hover    { color: #ffffff; }
+#custom-power           { color: #ed8796; font-size: 14px; }
+#custom-power:hover     { color: #ffffff; }
+
+/* ☕ Lid keep-awake (GNOME extension port) and  Conky widget toggle.
+ * NO explicit font-family: "CaskaydiaCove NF"/"Symbols Nerd Font" are
+ * not installed names (-> fallback Noto Sans -> clipped glyph). By inheriting
+ * the global font, fontconfig substitutes the Nerd Font glyphs as for the
+ * other modules. Geometry identical to #custom-tray-toggle (positive margins). */
+#custom-lid,
+#custom-conky {
+  padding: 0 8px;
+  margin: 0 2px;
+  font-size: 14px;
+  color: #6e738d;          /* off/inactive state */
+  transition: color 120ms ease;
+}
+#custom-lid.active      { color: #eed49f; }   /* keep-awake ON */
+#custom-conky.active    { color: #8bd5ca; }   /* conky visible */
+#custom-lid:hover,
+#custom-conky:hover     { color: #ffffff; }
+
+#custom-layout          { color: #f0c6c6; font-weight: bold; }
+
+#custom-niri-workspaces { color: #cad3f5; }
+#custom-niri-window     { color: #b8c0e0; font-style: italic; }
+#clock                  { color: #8aadf4; font-weight: bold; }
+#cpu, #memory           { color: #a6da95; }
+#network                { color: #8bd5ca; }
+#bluetooth              { color: #8aadf4; }
+#bluetooth.disabled,
+#bluetooth.off          { color: #6e738d; }
+#pulseaudio             { color: #f5a97f; }
+#battery                { color: #c6a0f6; }
+#battery.warning        { color: #eed49f; }
+#battery.critical:not(.charging) { color: #ed8796; }

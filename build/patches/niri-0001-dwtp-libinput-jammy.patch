@@ -1,0 +1,15 @@
+diff --git a/src/input/mod.rs b/src/input/mod.rs
+index f1ad493..7743a43 100644
+--- a/src/input/mod.rs
++++ b/src/input/mod.rs
+@@ -4685,7 +4685,9 @@ pub fn apply_libinput_settings(config: &niri_config::Input, device: &mut input::
+         });
+         let _ = device.config_tap_set_enabled(c.tap);
+         let _ = device.config_dwt_set_enabled(c.dwt);
+-        let _ = device.config_dwtp_set_enabled(c.dwtp);
++        // Patched out for Ubuntu 22.04 (libinput < 1.27): no libinput_device_config_dwtp_set_enabled symbol.
++        // let _ = device.config_dwtp_set_enabled(c.dwtp);
++        let _ = c.dwtp;
+         let _ = device.config_tap_set_drag_lock_enabled(if c.drag_lock {
+             input::DragLockState::EnabledTimeout
+         } else {

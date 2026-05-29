@@ -1,0 +1,12 @@
+[Unit]
+Description=Inhibit lid-switch suspend (NoMachine workaround)
+Documentation=man:systemd-inhibit(1)
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/systemd-inhibit --what=handle-lid-switch --who=lid-keep-awake --why=NoMachine\x20session --mode=block /bin/sleep infinity
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

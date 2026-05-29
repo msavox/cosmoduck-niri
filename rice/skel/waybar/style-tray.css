@@ -1,0 +1,16 @@
+/* Hidden bar: only used to register the StatusNotifierWatcher. */
+window#waybar {
+  background: transparent;
+  opacity: 0;
+}
+* {
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  font-size: 1px;
+}
+#tray, #tray * {
+  -gtk-icon-transform: scale(0);
+  opacity: 0;
+}

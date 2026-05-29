@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+UNIT="lid-keep-awake.service"
+
+# Always use the SYSTEM systemctl. A newer systemctl in PATH
+# (e.g. linuxbrew v260) calls dbus methods absent from the system systemd
+# (v249 on Jammy) and enable/disable --now fail with
+# "Unknown method DisableUnitFilesWithFlagsAndInstallInfo".
+SYSTEMCTL=/usr/bin/systemctl
+[ -x "$SYSTEMCTL" ] || SYSTEMCTL=systemctl
+
+cmd="${1:-status}"
+
+case "$cmd" in
+  start)
+    "$SYSTEMCTL" --user enable --now "$UNIT" >/dev/null 2>&1
+    PID=$("$SYSTEMCTL" --user show -p MainPID --value "$UNIT")
+    echo "Lid inhibitor started (PID: $PID, persists across reboot)"
+    ;;
+  stop)
+    "$SYSTEMCTL" --user disable --now "$UNIT" >/dev/null 2>&1 || true
+    echo "Lid inhibitor stopped"
+    ;;
+  status)
+    if "$SYSTEMCTL" --user is-active --quiet "$UNIT"; then
+      PID=$("$SYSTEMCTL" --user show -p MainPID --value "$UNIT")
+      ENABLED=$("$SYSTEMCTL" --user is-enabled "$UNIT" 2>/dev/null || echo unknown)
+      echo "RUNNING (PID: $PID, boot: $ENABLED)"
+    else
+      echo "STOPPED"
+    fi
+    ;;
+  toggle)
+    if "$SYSTEMCTL" --user is-active --quiet "$UNIT"; then
+      "$0" stop
+    else
+      "$0" start
+    fi
+    ;;
+  *)
+    echo "Usage: $(basename "$0") {start|stop|status|toggle}" >&2
+    exit 2
+    ;;
+esac

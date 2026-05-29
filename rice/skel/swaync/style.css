@@ -1,0 +1,302 @@
+/* swaync — libadwaita-like, Catppuccin Macchiato palette (aligned with waybar) */
+
+* {
+  font-family: "Inter", "Cantarell", "Ubuntu", "Noto Sans", sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+/* Transparent outer containers (layer-shell window) — no GTK halo */
+.floating-notifications,
+.floating-notifications.background,
+.control-center-list-placeholder {
+  background: transparent;
+  box-shadow: none;
+}
+
+.blank-window {
+  background: transparent;
+}
+
+/* ───── Floating notifications (popup) ───────────────────────────────── */
+.floating-notifications.background .notification-row {
+  background: transparent;
+  padding: 0;
+}
+
+.floating-notifications.background .notification {
+  background: rgba(30, 30, 46, 0.85);
+  border: 1px solid #494d64;
+  border-radius: 16px;
+  /* margin >= shadow extent, otherwise the layer-shell window
+     clips it with a rectangular edge. blur 14 + offset 4 → need ~18px. */
+  margin: 14px 18px 20px 18px;
+  padding: 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* ───── Control center (side drawer) ────────────────────────────── */
+.control-center {
+  background: rgba(30, 30, 46, 0.92);
+  border: 1px solid #494d64;
+  border-radius: 16px;
+  padding: 14px;
+  margin: 8px;
+  color: #cad3f5;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.control-center-list {
+  background: transparent;
+}
+
+.control-center-list-placeholder {
+  color: #6e738d;
+  font-size: 13px;
+  padding: 24px 0;
+}
+
+/* ───── Title bar ────────────────────────────────────────────────────── */
+.widget-title {
+  margin: 4px 6px 14px 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #cad3f5;
+}
+.widget-title > button {
+  background: rgba(73, 77, 100, 0.45);
+  color: #cad3f5;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.widget-title > button:hover {
+  background: rgba(138, 173, 244, 0.30);
+  color: #ffffff;
+}
+.widget-title > button:active {
+  background: rgba(138, 173, 244, 0.45);
+}
+
+/* ───── DND switch ───────────────────────────────────────────────────── */
+.widget-dnd {
+  margin: 4px 8px 10px 8px;
+  font-size: 13px;
+  color: #cad3f5;
+}
+.widget-dnd > switch {
+  background: rgba(73, 77, 100, 0.6);
+  border: none;
+  border-radius: 999px;
+  min-width: 44px;
+  min-height: 22px;
+}
+.widget-dnd > switch:checked {
+  background: #8aadf4;
+}
+.widget-dnd > switch slider {
+  background: #cad3f5;
+  border-radius: 999px;
+  min-width: 18px;
+  min-height: 18px;
+  margin: 2px;
+}
+
+/* ───── Single notifications in the drawer ─────────────────────────────────── */
+.notification-row {
+  outline: none;
+  background: transparent;
+  padding: 0;
+}
+
+.notification {
+  background: rgba(54, 58, 79, 0.55);
+  border: 1px solid rgba(73, 77, 100, 0.4);
+  border-radius: 14px;
+  margin: 4px 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.notification-background {
+  background: transparent;
+}
+
+.notification-content {
+  padding: 12px 14px;
+  background: transparent;
+}
+
+.notification-default-action {
+  background: transparent;
+  border: none;
+  border-radius: 14px;
+  padding: 0;
+}
+.notification-default-action:hover {
+  background: rgba(138, 173, 244, 0.10);
+}
+
+.summary {
+  color: #cad3f5;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.time {
+  color: #8087a2;
+  font-size: 11px;
+  margin-left: 8px;
+}
+
+.body {
+  color: #b8c0e0;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.app-name {
+  color: #8087a2;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.app-icon {
+  margin-right: 8px;
+}
+
+/* ───── Action buttons ──────────────────────────────────────────────── */
+.notification-action {
+  background: rgba(73, 77, 100, 0.5);
+  color: #cad3f5;
+  border: none;
+  border-radius: 999px;
+  margin: 4px 4px 8px 4px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.notification-action:hover {
+  background: rgba(138, 173, 244, 0.32);
+  color: #ffffff;
+}
+.notification-action:active {
+  background: rgba(138, 173, 244, 0.5);
+}
+
+/* ───── Close button ─────────────────────────────────────────────────── */
+.close-button {
+  background: transparent;
+  color: #8087a2;
+  border: none;
+  border-radius: 999px;
+  margin: 6px;
+  padding: 4px 8px;
+  min-width: 22px;
+  min-height: 22px;
+}
+.close-button:hover {
+  background: rgba(237, 135, 150, 0.22);
+  color: #ed8796;
+}
+.close-button:active {
+  background: #ed8796;
+  color: #ffffff;
+}
+
+/* ───── Urgency ──────────────────────────────────────────────────────── */
+.critical .notification {
+  border-left: 3px solid #ed8796;
+}
+.low .notification {
+  border-left: 3px solid #6e738d;
+}
+
+/* ───── Image / icon ─────────────────────────────────────────────────── */
+.notification image {
+  margin: 8px 4px 8px 10px;
+  border-radius: 10px;
+}
+
+/* ───── MPRIS widget (media player) ──────────────────────────────────── */
+.widget-mpris {
+  margin: 6px 4px;
+  padding: 12px;
+  background: rgba(54, 58, 79, 0.55);
+  border: 1px solid rgba(73, 77, 100, 0.4);
+  border-radius: 14px;
+  color: #cad3f5;
+}
+.widget-mpris-player {
+  padding: 4px;
+}
+.widget-mpris-title {
+  color: #cad3f5;
+  font-weight: 600;
+  font-size: 13px;
+}
+.widget-mpris-subtitle {
+  color: #a5adcb;
+  font-size: 11px;
+}
+.widget-mpris > box > button {
+  background: rgba(73, 77, 100, 0.5);
+  color: #cad3f5;
+  border: none;
+  border-radius: 999px;
+  padding: 4px 10px;
+  margin: 2px;
+}
+.widget-mpris > box > button:hover {
+  background: rgba(138, 173, 244, 0.30);
+  color: #ffffff;
+}
+
+/* ───── Volume widget ────────────────────────────────────────────────── */
+.widget-volume {
+  margin: 6px 4px;
+  padding: 12px;
+  background: rgba(54, 58, 79, 0.55);
+  border: 1px solid rgba(73, 77, 100, 0.4);
+  border-radius: 14px;
+  color: #cad3f5;
+}
+.widget-volume scale trough {
+  background: rgba(73, 77, 100, 0.6);
+  border-radius: 999px;
+  min-height: 6px;
+}
+.widget-volume scale highlight {
+  background: #8aadf4;
+  border-radius: 999px;
+}
+.widget-volume scale slider {
+  background: #cad3f5;
+  border: none;
+  border-radius: 999px;
+  min-width: 14px;
+  min-height: 14px;
+}
+
+/* ───── Inhibitors ───────────────────────────────────────────────────── */
+.widget-inhibitors {
+  margin: 6px 4px;
+  padding: 6px 10px;
+  background: transparent;
+  color: #8087a2;
+  font-size: 11px;
+}
+
+/* ───── Tooltip ──────────────────────────────────────────────────────── */
+tooltip {
+  background: rgba(30, 30, 46, 0.85);
+  border: 1px solid #494d64;
+  border-radius: 10px;
+}
+tooltip label {
+  font-size: 12px;
+  padding: 4px 8px;
+  color: #cad3f5;
+}

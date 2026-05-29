@@ -1,0 +1,22 @@
+// Bar HIDDEN: has only the tray module to run StatusNotifierWatcher
+// on D-Bus (needed to register Forti/blueman/nm-applet). Visually
+// invisible — the real icons appear only in the tray-dropdown.py dropdown.
+{
+  "layer": "background",
+  "position": "bottom",
+  "height": 1,
+  "spacing": 0,
+  "margin-bottom": -10,
+  "margin-right": -10,
+  "passthrough": true,
+
+  "modules-left": [],
+  "modules-center": [],
+  "modules-right": ["tray"],
+
+  "tray": {
+    "icon-size": 1,
+    "spacing": 0,
+    "show-passive-items": true
+  }
+}
