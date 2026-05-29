@@ -1,0 +1,26 @@
+#!/bin/sh
+# postinst — system-wide setup after install. Per-user config is done by the
+# user running `cosmoduck-niri-setup` (we don't know which user at this point).
+set -e
+
+case "$1" in
+  configure)
+    # the compiled libs (libdisplay-info, libwayland-client) live under
+    # /usr/local/lib/x86_64-linux-gnu -> add it to the loader path
+    echo "/usr/local/lib/x86_64-linux-gnu" > /etc/ld.so.conf.d/cosmoduck-niri.conf
+    ldconfig
+
+    # refresh caches (best-effort)
+    fc-cache -f >/dev/null 2>&1 || true
+    update-desktop-database -q /usr/share/applications 2>/dev/null || true
+    gtk-update-icon-cache -qf /usr/share/icons/Bibata-Modern-Classic 2>/dev/null || true
+
+    echo "-----------------------------------------------------------------"
+    echo " cosmoduck-niri installed."
+    echo " Each user, once:   cosmoduck-niri-setup"
+    echo " Then pick the 'niri' session at the login screen."
+    echo "-----------------------------------------------------------------"
+    ;;
+esac
+
+exit 0

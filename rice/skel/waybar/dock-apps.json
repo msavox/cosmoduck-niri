@@ -1,0 +1,84 @@
+[
+  {
+    "id": "nautilus",
+    "name": "File",
+    "command": "nautilus --new-window",
+    "color": "#8bd5ca",
+    "match": "(?i)nautilus",
+    "app_ids": ["org.gnome.Nautilus", "nautilus"],
+    "icon_name": "org.gnome.Nautilus"
+  },
+  {
+    "id": "firefox",
+    "name": "Firefox",
+    "command": "firefox",
+    "color": "#f5a97f",
+    "match": "(?i)firefox",
+    "app_ids": ["firefox", "Firefox", "firefox-esr"],
+    "icon_name": "firefox"
+  },
+  {
+    "id": "terminal",
+    "name": "Terminal",
+    "command": "gnome-terminal",
+    "color": "#a6da95",
+    "match": "(?i)gnome-terminal",
+    "app_ids": ["org.gnome.Terminal", "gnome-terminal-server"],
+    "icon_name": "org.gnome.Terminal"
+  },
+  {
+    "id": "text-editor",
+    "name": "Text Editor",
+    "command": "sh -c 'gnome-text-editor || gedit'",
+    "color": "#8aadf4",
+    "match": "(?i)(gnome-text-editor|gedit)",
+    "app_ids": ["org.gnome.TextEditor", "org.gnome.gedit", "gedit"],
+    "icon_name": "org.gnome.TextEditor"
+  },
+  {
+    "id": "settings",
+    "name": "Settings",
+    "command": "gnome-control-center",
+    "color": "#b8c0e0",
+    "match": "(?i)gnome-control-center",
+    "app_ids": ["gnome-control-center", "org.gnome.Settings"],
+    "icon_name": "org.gnome.Settings"
+  },
+  {
+    "id": "software",
+    "name": "Software",
+    "command": "sh -c 'gnome-software || snap-store'",
+    "color": "#c6a0f6",
+    "match": "(?i)(gnome-software|snap-store)",
+    "app_ids": ["org.gnome.Software", "snap-store"],
+    "icon_name": "org.gnome.Software"
+  },
+  {
+    "id": "calculator",
+    "name": "Calculator",
+    "command": "gnome-calculator",
+    "color": "#eed49f",
+    "match": "(?i)gnome-calculator",
+    "app_ids": ["org.gnome.Calculator"],
+    "icon_name": "org.gnome.Calculator"
+  },
+  {
+    "id": "dock-setup",
+    "name": "Dock Setup",
+    "command": "/usr/bin/python3 __HOME__/.config/waybar/dock-manager.py",
+    "color": "#f5bde6",
+    "match": "(?i)dock-manager",
+    "app_ids": ["dock-manager.py"],
+    "icon_name": "preferences-system"
+  },
+  {
+    "id": "trash",
+    "name": "Trash",
+    "command": "nautilus trash:///",
+    "color": "#6e738d",
+    "match": "(?i)nautilus.*trash",
+    "app_ids": [],
+    "icon_name": "user-trash",
+    "post_taskbar": true
+  }
+]

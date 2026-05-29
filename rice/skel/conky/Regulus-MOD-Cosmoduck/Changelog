@@ -1,0 +1,27 @@
+Changelog
+------------------------------
+Regulus Dark - Conky Theme
+[ Leonis Themes Pack ] 
+
+Created by Closebox73
+Modified lsteam
+------------------------------
+
+v1.0
+date : 05 Aug 2021
+-	Initial release
+
+
+v2.0
+date : 26 Feb 2023
+-	Add override_utf8_locale line
+-	Add License
+-	Add Changelog file
+-	A few changes to the script
+-	Add Fahrenheit variant
+-	Add Playerctl variant
+
+v2.1
+Date 18 Nov 2023
+- Add Album art, music title, artis title on left bottom
+- change color scheme to everforest color

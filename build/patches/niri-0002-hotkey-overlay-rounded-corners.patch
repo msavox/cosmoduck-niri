@@ -1,0 +1,61 @@
+diff --git a/src/ui/hotkey_overlay.rs b/src/ui/hotkey_overlay.rs
+index b8fdca1..a32bc67 100644
+--- a/src/ui/hotkey_overlay.rs
++++ b/src/ui/hotkey_overlay.rs
+@@ -24,6 +24,7 @@ const PADDING: i32 = 8;
+ // const MARGIN: i32 = PADDING * 2;
+ const FONT: &str = "sans 14px";
+ const BORDER: i32 = 4;
++const RADIUS: i32 = 12;
+ const LINE_INTERVAL: i32 = 2;
+ const TITLE: &str = "Important Hotkeys";
+ 
+@@ -385,8 +386,27 @@ fn render(
+ 
+     let surface = ImageSurface::create(cairo::Format::ARgb32, width, height)?;
+     let cr = cairo::Context::new(&surface)?;
++
++    // Rounded-rectangle sub-path helper, so the overlay reads like a window
++    // with rounded corners instead of a sharp-cornered box.
++    let radius_px: i32 = to_physical_precise_round(scale, RADIUS);
++    let radius = f64::from(radius_px);
++    let w = f64::from(width);
++    let h = f64::from(height);
++    let rounded_rect = |x: f64, y: f64, rw: f64, rh: f64, r: f64| {
++        let deg = std::f64::consts::PI / 180.;
++        cr.new_sub_path();
++        cr.arc(x + rw - r, y + r, r, -90. * deg, 0.);
++        cr.arc(x + rw - r, y + rh - r, r, 0., 90. * deg);
++        cr.arc(x + r, y + rh - r, r, 90. * deg, 180. * deg);
++        cr.arc(x + r, y + r, r, 180. * deg, 270. * deg);
++        cr.close_path();
++    };
++
++    // Leave the surface transparent outside the rounding, fill the rounded body.
+     cr.set_source_rgb(0.1, 0.1, 0.1);
+-    cr.paint()?;
++    rounded_rect(0., 0., w, h, radius);
++    cr.fill()?;
+ 
+     cr.move_to(padding.into(), padding.into());
+     let layout = pangocairo::functions::create_layout(&cr);
+@@ -427,14 +447,13 @@ fn render(
+         );
+     }
+ 
+-    cr.move_to(0., 0.);
+-    cr.line_to(width.into(), 0.);
+-    cr.line_to(width.into(), height.into());
+-    cr.line_to(0., height.into());
+-    cr.line_to(0., 0.);
+     cr.set_source_rgb(0.5, 0.8, 1.0);
+     // Keep the border width even to avoid blurry edges.
+-    cr.set_line_width((f64::from(BORDER) / 2. * scale).round() * 2.);
++    let line_width = (f64::from(BORDER) / 2. * scale).round() * 2.;
++    cr.set_line_width(line_width);
++    // Inset by half the stroke so the rounded border stays inside the surface.
++    let inset = line_width / 2.;
++    rounded_rect(inset, inset, w - line_width, h - line_width, (radius - inset).max(0.));
+     cr.stroke()?;
+     drop(cr);
+ 
