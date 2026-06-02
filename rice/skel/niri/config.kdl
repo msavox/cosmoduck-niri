@@ -92,8 +92,17 @@ environment {
     // wlr.portal of xdg-desktop-portal (UseIn=wlroots;sway;Wayfire;river),
     // so the `ScreenCast=wlr;` rule in ~/.config/xdg-desktop-portal/
     // niri-portals.conf enables xdpw and Teams can do screen share.
+    // NB: this block only applies to children niri spawns; the portal is
+    // D-Bus/systemd-activated and does NOT inherit it (stays "niri"). It is
+    // propagated to systemd and the portal restarted by the spawn below.
     XDG_CURRENT_DESKTOP "niri:wlroots"
 }
+// The xdg-desktop-portal frontend is systemd-activated with
+// XDG_CURRENT_DESKTOP=niri (no :wlroots): the wlr backend is then "not
+// eligible", ScreenCast falls back to the gnome backend (AvailableSourceTypes=0)
+// and screen sharing produces nothing. Push the value into the systemd manager
+// and restart the portal so it binds the wlr backend (AvailableSourceTypes=1).
+spawn-sh-at-startup "systemctl --user set-environment XDG_CURRENT_DESKTOP=niri:wlroots && systemctl --user restart xdg-desktop-portal.service"
 spawn-at-startup "waybar" "-c" "__HOME__/.config/waybar/config.jsonc" "-s" "__HOME__/.config/waybar/style.css"
 spawn-at-startup "waybar" "-c" "__HOME__/.config/waybar/dock.jsonc" "-s" "__HOME__/.config/waybar/dock.css"
 spawn-sh-at-startup "sleep 1 && __HOME__/.config/waybar/tray-toggle.sh start-if-open"
