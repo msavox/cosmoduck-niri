@@ -15,7 +15,7 @@ TS="$(date +%Y%m%d-%H%M%S)"
 echo ">> Installing the Cosmoduck-niri config for user $USER"
 
 # 1. config dirs (backup existing)
-for d in niri waybar swaync conky; do
+for d in niri waybar swaync conky xdg-desktop-portal-wlr; do
   if [ -e "$CFG/$d" ]; then
     mv "$CFG/$d" "$CFG/$d.bak-$TS"
     echo "   backup: ~/.config/$d -> $d.bak-$TS"
