@@ -42,10 +42,50 @@ if [[ -f "$wall" ]]; then
   fi
 fi
 
-# --- 3. launch swaylock ---
+# --- 3. launch swaylock-effects ---
+# Binary: swaylock-effects (jirutka fork, ext-session-lock-v1, built into
+# /usr/local/bin). Adds fade-in, grace, and --effect-compose (duck in the
+# center) over stock swaylock. Indicator colors = Cosmoduck palette.
+SWAYLOCK=swaylock-effects
+command -v "$SWAYLOCK" >/dev/null 2>&1 || SWAYLOCK=swaylock   # fall back to stock
+
+# Duck in the center of the ring (the same "cosmofinder" Nautilus icon). Prefer
+# the per-user copy installed by cosmoduck-niri-setup; fall back to the shipped
+# system copy.
+DUCK="$HOME/Pictures/icons/cosmofinder.png"
+[[ -f "$DUCK" ]] || DUCK="/usr/share/cosmoduck-niri/cosmofinder.png"
+
+# options supported by both stock swaylock and the fork.
+# The circle fill is TRANSPARENT so the duck, composited on the background,
+# shows inside the ring. The ring changes color per state.
+opts=(
+  -f
+  --indicator-radius 175 --indicator-thickness 10 --indicator-idle-visible
+  --font "Noto Sans" --font-size 26
+  --ring-color 3d72abee --ring-ver-color 5dade2ee --ring-clear-color a6e3a1ee --ring-wrong-color f38ba8ee
+  --inside-color 00000000 --inside-ver-color 00000000 --inside-wrong-color 00000000 --inside-clear-color 00000000
+  --key-hl-color 5dade2 --bs-hl-color f38ba8
+  # status text TRANSPARENT: it would sit in the center of the ring, over the duck.
+  # Feedback is left to the ring color (ver/wrong/clear).
+  --text-color 00000000 --text-ver-color 00000000 --text-wrong-color 00000000 --text-clear-color 00000000
+  --text-caps-lock-color 00000000 -L
+  --line-uses-inside --separator-color 00000000
+)
+
+# options exclusive to the swaylock-effects fork.
+# No --clock: the clock would draw in the same center, OVER the duck.
+if [[ "$SWAYLOCK" == swaylock-effects ]]; then
+  opts+=( --fade-in 0.2 )
+  # <pos>;<size>;<gravity>;<path> — screen center, 280x280 (fits in the circle).
+  # For the smaller variant: ring 155 + duck 230x230.
+  [[ -f "$DUCK" ]] && opts+=( --effect-compose "50%,50%;280x280;center;$DUCK" )
+  # Passwordless unlock in the first N seconds after lock. Off for safety:
+  # opts+=( --grace 5 --grace-no-mouse )
+fi
+
 if [[ -n "$blurred" && -f "$blurred" ]]; then
-  exec swaylock -f -i "$blurred" --scaling fill
+  exec "$SWAYLOCK" "${opts[@]}" -i "$blurred" --scaling fill
 else
   # fallback: no image -> plain color
-  exec swaylock -f -c 1e1e2e
+  exec "$SWAYLOCK" "${opts[@]}" -c 1e1e2e
 fi

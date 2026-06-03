@@ -1,0 +1,19 @@
+#!/bin/sh
+# systemd-phase feeder (after switch_root): forwards to Plymouth ONLY the new
+# kernel messages (driver init: nvidia, usb, etc.) while the splash is visible.
+# It shuts itself off when plymouth exits.
+#
+# The "[ OK ] Started ..." lines from systemd jobs already reach the theme via
+# SetUpdateStatusFunction: here we only handle the kernel.
+
+plymouth --ping 2>/dev/null || exit 0
+
+# Watchdog: as soon as plymouth exits, terminate the whole process group.
+( while plymouth --ping 2>/dev/null; do sleep 1; done; kill 0 2>/dev/null ) &
+
+dmesg --follow-new --color=never 2>/dev/null | while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    plymouth display-message --text="$line" 2>/dev/null || true
+done
+
+exit 0

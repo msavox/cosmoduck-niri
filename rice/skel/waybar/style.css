@@ -108,7 +108,27 @@ window#waybar {
 #custom-layout          { color: #f0c6c6; font-weight: bold; }
 
 #custom-niri-workspaces { color: #cad3f5; }
-#custom-niri-window     { color: #b8c0e0; font-style: italic; }
+#custom-niri-window     { color: #b8c0e0; font-style: italic; padding-left: 0; margin-left: -8px; }
+
+/* macOS-style "close window" button, Cosmoduck blue (#0088FF).
+ * The generous vertical margins keep the widget from filling the whole bar
+ * height (otherwise it becomes a vertical capsule): ~14px box + border-radius
+ * 50% = round dot. The white × only appears on hover.
+ * niri-close.sh empties the module when no window is focused. */
+#custom-close-window {
+  background-color: #0088ff;
+  color: rgba(255, 255, 255, 0);     /* × invisible at rest, clean circle */
+  border-radius: 50%;
+  min-width: 14px;
+  min-height: 14px;
+  padding: 0;
+  margin: 7px 0 7px 4px;             /* top/bottom compress height to ~14px; right=0 so the circle isn't clipped */
+  font-size: 9px;
+  font-weight: bold;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+#custom-close-window:hover  { color: rgba(255, 255, 255, 0.9); }
+#custom-close-window:active { background-color: #006fd6; }
 #clock                  { color: #8aadf4; font-weight: bold; }
 #cpu, #memory           { color: #a6da95; }
 #network                { color: #8bd5ca; }

@@ -18,7 +18,7 @@ RICE="$REPO/rice"
 ROOT="$HERE/build/pkgroot"
 PREFIX="${PREFIX:-/usr/local}"
 PKG="cosmoduck-niri"
-VER="1.0.4"
+VER="1.1.0"
 ARCH="amd64"
 
 echo ">> reset staging"
@@ -32,7 +32,7 @@ cp -a "$STATIC/." "$ROOT/"
 # ── 1. compiled binaries -> /usr/local (stripped copies) ─────────────
 echo ">> binaries (from $PREFIX, built by ../build/build-all.sh)"
 install -d "$ROOT/usr/local/bin" "$ROOT/usr/local/lib/x86_64-linux-gnu"
-BINS="niri niri-session Xwayland swaylock swaync swaync-client di-edid-decode xwayland-satellite nwg-dock"
+BINS="niri niri-session Xwayland swaylock swaylock-effects swaync swaync-client di-edid-decode xwayland-satellite nwg-dock"
 for b in $BINS; do
   [ -f "$PREFIX/bin/$b" ] || { echo "MISSING: $PREFIX/bin/$b — run ../build/build-all.sh first" >&2; exit 1; }
   install -m755 "$PREFIX/bin/$b" "$ROOT/usr/local/bin/$b"
@@ -98,6 +98,10 @@ find "$ROOT" -type d -exec chmod 0755 {} +
 find "$ROOT" -type f -exec chmod 0644 {} +
 find "$ROOT/usr/local/bin" -type f -exec chmod 0755 {} +
 chmod 0755 "$ROOT/usr/bin/cosmoduck-niri-setup"
+# Plymouth kernel-log feeders (systemd-phase binary + initramfs hook) are executable
+[ -f "$ROOT/usr/bin/cosmoduck-bootlog" ] && chmod 0755 "$ROOT/usr/bin/cosmoduck-bootlog"
+[ -f "$ROOT/etc/initramfs-tools/scripts/init-premount/cosmoduck-bootlog" ] && \
+  chmod 0755 "$ROOT/etc/initramfs-tools/scripts/init-premount/cosmoduck-bootlog"
 chmod 0755 "$ROOT/DEBIAN/postinst" "$ROOT/DEBIAN/prerm" "$ROOT/DEBIAN/postrm"
 find "$SKEL" -type f \( -name '*.sh' -o -name '*.py' \) -exec chmod 0755 {} +
 chmod 0755 "$SKEL/bin/lid-keep-awake"

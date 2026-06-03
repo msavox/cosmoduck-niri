@@ -18,6 +18,7 @@ STEPS=(
   05-swaync.sh
   06-nwg-dock.sh
   07-swaylock.sh
+  07b-swaylock-effects.sh
   08-niri.sh
 )
 

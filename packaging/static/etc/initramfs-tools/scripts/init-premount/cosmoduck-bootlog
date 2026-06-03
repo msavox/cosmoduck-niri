@@ -1,0 +1,35 @@
+#!/bin/sh
+# init-premount script: forwards the kernel log (/dev/kmsg) to Plymouth so the
+# "cosmoduck" theme shows it scrolling on the background during early boot
+# (LUKS decrypt, fsck, driver init). All in the background: it must NEVER block
+# boot. The process dies on its own at switch_root.
+PREREQ="plymouth"
+prereqs() { echo "$PREREQ"; }
+case "$1" in
+    prereqs) prereqs; exit 0 ;;
+esac
+
+# Proceed only if plymouth is active (splash requested).
+plymouth --ping 2>/dev/null || exit 0
+
+(
+    # /dev/kmsg: each record is "prio,seq,timestamp,flags;text".
+    # Reading from the start gives us the already-buffered kernel boot and then
+    # follows new messages (the read blocks waiting, no EOF).
+    while IFS= read -r line; do
+        # Keep only real records (they start with the numeric priority);
+        # continuation lines start with a space -> discarded.
+        case "$line" in
+            [0-9]*) : ;;
+            *) continue ;;
+        esac
+        prio=${line%%,*}
+        # Skip debug messages (priority 7), too noisy.
+        [ "$prio" = "7" ] && continue
+        msg=${line#*;}
+        [ -z "$msg" ] && continue
+        plymouth display-message --text="$msg" 2>/dev/null || true
+    done < /dev/kmsg
+) &
+
+exit 0

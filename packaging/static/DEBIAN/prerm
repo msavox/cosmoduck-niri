@@ -1,3 +1,11 @@
 #!/bin/sh
 set -e
+
+case "$1" in
+  remove|deconfigure)
+    # stop/disable the Plymouth kernel-log feeder before its unit file goes away
+    systemctl disable --now cosmoduck-bootlog.service 2>/dev/null || true
+    ;;
+esac
+
 exit 0

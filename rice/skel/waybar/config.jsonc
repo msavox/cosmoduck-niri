@@ -9,7 +9,7 @@
   "margin-left": 12,
   "margin-right": 12,
 
-  "modules-left":   ["custom/ubuntu", "custom/niri-workspaces", "custom/niri-window"],
+  "modules-left":   ["custom/ubuntu", "custom/niri-workspaces", "custom/close-window", "custom/niri-window"],
   "modules-center": ["clock"],
   "modules-right":  ["custom/layout", "custom/tray-toggle", "custom/notification", "pulseaudio", "bluetooth", "network", "cpu", "memory", "custom/conky", "custom/lid", "battery", "custom/power"],
 
@@ -49,6 +49,14 @@
     "on-click-right":  "niri msg action focus-workspace-previous",
     "on-scroll-up":    "niri msg action focus-workspace-up",
     "on-scroll-down":  "niri msg action focus-workspace-down"
+  },
+
+  "custom/close-window": {
+    "exec": "__HOME__/.config/waybar/niri-close.sh",
+    "interval": 1,
+    "return-type": "json",
+    "tooltip": true,
+    "on-click": "niri msg action close-window"
   },
 
   "custom/niri-window": {
