@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Cosmoduck
+Description=Cosmoduck boot splash - duck centered with a loading bar
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/cosmoduck
+ScriptFile=/usr/share/plymouth/themes/cosmoduck/cosmoduck.script

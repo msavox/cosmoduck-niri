@@ -45,7 +45,7 @@ screenshots.
 Grab the `.deb` from the [**latest release**](https://github.com/msavox/cosmoduck-niri/releases/latest), then:
 
 ```bash
-sudo apt install ./cosmoduck-niri_1.0.3_amd64.deb   # pulls all runtime deps
+sudo apt install ./cosmoduck-niri_1.1.0_amd64.deb   # pulls all runtime deps
 cosmoduck-niri-setup                                 # run as your user, NOT sudo
 ```
 
@@ -70,9 +70,10 @@ You can rebuild the `.deb` yourself afterwards with
 | | |
 |---|---|
 | **Compositor** | niri `v26.04` + jammy patches |
-| **Bar & dock** | waybar top bar, macOS-style pinned dock with running indicators, per-app notification badges, and adjustable height (slider in the dock manager) |
+| **Bar & dock** | waybar top bar with a macOS-style close-window button, plus a macOS-style pinned dock with running indicators, per-app notification badges, and adjustable height (slider in the dock manager) |
 | **Notifications** | SwayNotificationCenter (swaync); clicking a notification focuses the source app's window |
-| **Lock** | swaylock over a blurred wallpaper |
+| **Lock** | swaylock-effects over a blurred wallpaper, with the Cosmoduck duck composited in the lock ring |
+| **Boot splash** | Plymouth "cosmoduck" theme — duck + loading bar over a scrolling kernel/systemd log (set up automatically; reverts on uninstall) |
 | **Widget** | conky "Cosmoduck" bridged onto niri's background layer |
 | **Cheatsheet** | custom 3-column keyboard cheatsheet (F1), auto-built from your keybinds, shown at first login |
 | **Theme** | `cosmoduck-*` GTK theme (WhiteSur fork, blue window buttons), Bibata cursor, CaskaydiaCove Nerd Font |
@@ -84,10 +85,14 @@ You can rebuild the `.deb` yourself afterwards with
 
 ![tiling](docs/screenshots/02-tiling.png)
 
-**macOS-style dock** (pinned apps + running indicators + trash) and the **top bar** (workspaces, window title, tray, custom modules — ☕ lid keep-awake, 👁 conky toggle, volume):
+**macOS-style dock** (pinned apps + running indicators + trash) and the **top bar** (workspaces, the blue close-window button, window title, tray, custom modules — ☕ lid keep-awake, 👁 conky toggle, volume):
 
 ![dock](docs/screenshots/03-dock.png)
 ![bar](docs/screenshots/04-bar.png)
+
+**Dock manager** — pin/unpin apps and tune the dock height with a slider:
+
+![dock-manager](docs/screenshots/13-dock-manager.png)
 
 **Keyboard cheatsheet** (F1) — auto-built from your keybinds, shown at first login:
 
@@ -96,6 +101,11 @@ You can rebuild the `.deb` yourself afterwards with
 | Notifications (swaync) | Calendar popup | conky widget |
 |:---:|:---:|:---:|
 | ![swaync](docs/screenshots/07-swaync.png) | ![calendar](docs/screenshots/06-calendar.png) | ![conky](docs/screenshots/08-conky.png) |
+
+**Lock screen** (swaylock-effects, duck in the ring over the blurred wallpaper) and the **Plymouth boot splash** (duck + loading bar over the scrolling kernel log):
+
+![swaylock](docs/screenshots/10-swaylock.png)
+![plymouth](docs/screenshots/12-plymouth.png)
 
 **Light theme** (`cosmoduck-Light`) and the theme's blue macOS-style window buttons:
 
@@ -132,6 +142,11 @@ clone-and-`setup.sh` route, install these third-party assets for full fidelity:
 - The from-source scripts for components 02–07 are reconstructed from the build
   provenance and may need a missing `-dev` package on a fresh box — see
   [`build/README.md`](build/README.md) for what's battle-tested vs reconstructed.
+- **The `.deb` sets the Plymouth boot splash to "cosmoduck"** (via
+  `update-alternatives`) and **rebuilds the initramfs** on install — so the first
+  install takes a little longer. Uninstalling reverts the splash and rebuilds the
+  initramfs again. The kernel log is read from `/dev/kmsg`, so GRUB's `quiet` is
+  left untouched.
 
 ## License
 

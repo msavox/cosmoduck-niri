@@ -1,0 +1,163 @@
+#  Cosmoduck Plymouth theme (hybrid terminal)
+#  Sfondo: log del kernel/systemd che scorre come un terminale.
+#  Primo piano: papera al centro + barra di caricamento (sempre visibile).
+
+#-------------------------------- Screen ------------------------------------
+screen.width  = Window.GetWidth();
+screen.height = Window.GetHeight();
+
+#------------------------------ Background ----------------------------------
+bg.image = Image("background.png");
+screen.ratio = screen.width / screen.height;
+bg.ratio     = bg.image.GetWidth() / bg.image.GetHeight();
+if (screen.ratio > bg.ratio)
+    bg.factor = screen.width / bg.image.GetWidth();
+else
+    bg.factor = screen.height / bg.image.GetHeight();
+bg.scaled = bg.image.Scale(bg.image.GetWidth() * bg.factor,
+                           bg.image.GetHeight() * bg.factor);
+bg.sprite = Sprite(bg.scaled);
+bg.sprite.SetPosition(screen.width / 2 - bg.scaled.GetWidth() / 2,
+                      screen.height / 2 - bg.scaled.GetHeight() / 2, -100);
+
+#--------------------------- Dim panel (contrasto) --------------------------
+# Pannello nero semi-trasparente per rendere leggibile il testo del terminale.
+dim.image  = Image("dim.png");
+dim.scaled = dim.image.Scale(screen.width, screen.height);
+dim.sprite = Sprite(dim.scaled);
+dim.sprite.SetPosition(0, 0, -90);
+
+#------------------------- Terminal log (sfondo) ----------------------------
+# Ring-buffer di righe testo che scorrono verso l'alto. Le righe arrivano da
+# Plymouth via SetMessageFunction (feeder kernel /dev/kmsg) e
+# SetUpdateStatusFunction (job di systemd).
+log.font = "Ubuntu Mono 12";
+log.sample = Image.Text("Ag1|jQ", 1, 1, 1, 1, log.font);
+log.lh = log.sample.GetHeight() + 3;
+log.x  = screen.width * 0.035;
+log.y0 = screen.height * 0.05;
+log.max = Math.Int((screen.height * 0.90) / log.lh);
+if (log.max > 34) log.max = 34;
+if (log.max < 6)  log.max = 6;
+for (i = 0; i < log.max; i++) {
+    log.spr[i] = Sprite();
+    log.spr[i].SetPosition(log.x, log.y0 + i * log.lh, -50);
+    log.spr[i].SetOpacity(0.90);
+}
+
+# Cerca una sottostringa: spostiamo l'haystack di 1 carattere cosi' un match
+# non cade mai a indice 0 (che plymouth tratterebbe come "non trovato").
+fun contains(t, sub) {
+    return StringString(" " + t, sub);
+}
+
+# Colore della riga per livello/keyword (palette duck di default).
+fun line_color(t) {
+    c.r = 0.36; c.g = 0.68; c.b = 0.89;          # #5dade2 - info (default)
+    if (contains(t, "rror") || contains(t, "ailed") || contains(t, "FAIL") ||
+        contains(t, "BUG")  || contains(t, "egfault") || contains(t, "anic")) {
+        c.r = 0.93; c.g = 0.32; c.b = 0.28;      # rosso - errore
+    } else if (contains(t, "arn") || contains(t, "WARN")) {
+        c.r = 0.96; c.g = 0.78; c.b = 0.24;      # ambra - warning
+    } else if (contains(t, "OK") || contains(t, "tarted") || contains(t, "eached") ||
+               contains(t, "ounted") || contains(t, "inished") || contains(t, "ctivat")) {
+        c.r = 0.47; c.g = 0.86; c.b = 0.47;      # verde - ok
+    }
+    return c;
+}
+
+# Aggiunge una riga in fondo, scorrendo le precedenti verso l'alto.
+fun push_line(text) {
+    if (!text) return;
+    if (text == "") return;
+    if (StringLength(text) > 200)
+        text = StringCopy(text, 0, 200);
+    col = line_color(text);
+    img = Image.Text(text, col.r, col.g, col.b, 1, log.font);
+    for (i = 0; i < log.max - 1; i++)
+        log.img[i] = log.img[i + 1];
+    log.img[log.max - 1] = img;
+    for (i = 0; i < log.max; i++) {
+        if (log.img[i])
+            log.spr[i].SetImage(log.img[i]);
+    }
+}
+
+fun message_callback(text) {
+    push_line(text);
+}
+Plymouth.SetMessageFunction(message_callback);
+
+fun update_status_callback(status) {
+    push_line(status);
+}
+Plymouth.SetUpdateStatusFunction(update_status_callback);
+
+#-------------------------------- Duck --------------------------------------
+duck.image  = Image("duck.png");
+# papera ~18% del lato corto dello schermo
+duck.target = Math.Min(screen.width, screen.height) * 0.18;
+duck.factor = duck.target / duck.image.GetHeight();
+duck.image  = duck.image.Scale(duck.image.GetWidth()  * duck.factor,
+                               duck.image.GetHeight() * duck.factor);
+duck.x = screen.width  / 2 - duck.image.GetWidth()  / 2;
+duck.y = screen.height / 2 - duck.image.GetHeight() / 2 - screen.height * 0.04;
+duck.sprite = Sprite(duck.image);
+duck.sprite.SetPosition(duck.x, duck.y, 10);
+
+#----------------------------- Progress bar ---------------------------------
+box.image = Image("progress_box.png");
+bar.image = Image("progress_bar.png");
+
+box.x = screen.width / 2 - box.image.GetWidth() / 2;
+box.y = duck.y + duck.image.GetHeight() + screen.height * 0.07;
+box.sprite = Sprite(box.image);
+box.sprite.SetPosition(box.x, box.y, 11);
+
+bar.x = box.x + 2;
+bar.y = box.y + 2;
+bar.sprite = Sprite();
+bar.sprite.SetPosition(bar.x, bar.y, 12);
+
+fun progress_callback(duration, progress) {
+    bar.w = bar.image.GetWidth() * progress;
+    if (bar.w < 1) bar.w = 1;
+    bar.scaled = bar.image.Scale(bar.w, bar.image.GetHeight());
+    bar.sprite.SetImage(bar.scaled);
+    bar.sprite.SetPosition(bar.x, bar.y, 12);
+    # la barra e la sua cornice non si nascondono mai
+    box.sprite.SetOpacity(1);
+    bar.sprite.SetOpacity(1);
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+#------------------------- Password prompt (LUKS/fsck) ----------------------
+# Lo sblocco disco e' automatico (TPM): se pero' venisse chiesta una password,
+# mostriamo dei pallini SOTTO la barra. La barra NON viene mai nascosta.
+fun display_password_callback(prompt, bullets) {
+    dot.w = bar.image.GetHeight();
+    pw.y  = box.y + box.image.GetHeight() + screen.height * 0.03;
+    pw.total = bullets * (dot.w * 2);
+    pw.x = screen.width / 2 - pw.total / 2;
+    for (i = 0; i < bullets; i++) {
+        if (!pw.dots[i])
+            pw.dots[i] = Sprite(bar.image.Scale(dot.w, dot.w));
+        pw.dots[i].SetPosition(pw.x + i * (dot.w * 2), pw.y, 13);
+        pw.dots[i].SetOpacity(1);
+    }
+    for (i = bullets; pw.dots[i]; i++)
+        pw.dots[i].SetOpacity(0);
+    # barra sempre visibile
+    box.sprite.SetOpacity(1);
+    bar.sprite.SetOpacity(1);
+}
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+
+# Ritorno allo stato normale: nascondi i pallini, lascia barra e cornice.
+fun display_normal_callback() {
+    for (i = 0; pw.dots[i]; i++)
+        pw.dots[i].SetOpacity(0);
+    box.sprite.SetOpacity(1);
+    bar.sprite.SetOpacity(1);
+}
+Plymouth.SetDisplayNormalFunction(display_normal_callback);

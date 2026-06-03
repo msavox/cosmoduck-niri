@@ -1,0 +1,16 @@
+[Unit]
+Description=Cosmoduck boot log feeder (kernel log -> plymouth splash)
+Documentation=file:///usr/share/plymouth/themes/cosmoduck/cosmoduck.script
+DefaultDependencies=no
+After=plymouth-start.service
+Wants=plymouth-start.service
+ConditionKernelCommandLine=splash
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/cosmoduck-bootlog
+KillMode=mixed
+TimeoutStopSec=2
+
+[Install]
+WantedBy=plymouth-start.service

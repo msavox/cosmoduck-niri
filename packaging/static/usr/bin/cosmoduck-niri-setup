@@ -29,6 +29,13 @@ install -d "$HOME/.local/bin" "$CFG/systemd/user"
 install -m755 "$SKEL/bin/lid-keep-awake"                "$HOME/.local/bin/lid-keep-awake"
 install -m644 "$SKEL/systemd-user/lid-keep-awake.service" "$CFG/systemd/user/lid-keep-awake.service"
 
+# 2b. duck icon used by the lock screen (swaylock-blur.sh) and as the
+# "cosmofinder" Nautilus icon. Don't clobber a user-provided one.
+install -d "$HOME/Pictures/icons"
+if [ ! -e "$HOME/Pictures/icons/cosmofinder.png" ] && [ -f /usr/share/cosmoduck-niri/cosmofinder.png ]; then
+  install -m644 /usr/share/cosmoduck-niri/cosmofinder.png "$HOME/Pictures/icons/cosmofinder.png"
+fi
+
 # 3. substitute the __HOME__ placeholder with the real home in every text file
 TARGETS="$CFG/niri $CFG/waybar $CFG/swaync $CFG/conky $HOME/.local/bin/lid-keep-awake $CFG/systemd/user/lid-keep-awake.service"
 grep -rIl '__HOME__' $TARGETS 2>/dev/null | while read -r f; do

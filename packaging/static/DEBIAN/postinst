@@ -10,10 +10,37 @@ case "$1" in
     echo "/usr/local/lib/x86_64-linux-gnu" > /etc/ld.so.conf.d/cosmoduck-niri.conf
     ldconfig
 
+    # PAM config for the lock screen: both stock swaylock and swaylock-effects
+    # authenticate against the "swaylock" PAM service. jammy's swaylock package
+    # ships /etc/pam.d/swaylock, but we don't depend on it — create a minimal one
+    # only if it's missing (don't clobber/own a file another package may provide).
+    if [ ! -e /etc/pam.d/swaylock ]; then
+      echo "auth include login" > /etc/pam.d/swaylock
+    fi
+
     # refresh caches (best-effort)
     fc-cache -f >/dev/null 2>&1 || true
     update-desktop-database -q /usr/share/applications 2>/dev/null || true
     gtk-update-icon-cache -qf /usr/share/icons/Bibata-Modern-Classic 2>/dev/null || true
+
+    # Plymouth "cosmoduck" boot splash (duck + loading bar + scrolling kernel
+    # log). jammy has no plymouth-set-default-theme, so we register via
+    # update-alternatives and rebuild the initramfs (the splash + its early
+    # kernel-log feeder live inside it). All best-effort: a failure here must
+    # not abort the package install.
+    THEME=/usr/share/plymouth/themes/cosmoduck/cosmoduck.plymouth
+    if [ -f "$THEME" ] && command -v update-alternatives >/dev/null 2>&1; then
+      update-alternatives --install /usr/share/plymouth/themes/default.plymouth \
+        default.plymouth "$THEME" 200 || true
+      update-alternatives --set default.plymouth "$THEME" || true
+
+      # systemd-phase kernel-log feeder (the early-boot one is an initramfs hook)
+      systemctl daemon-reload 2>/dev/null || true
+      systemctl enable cosmoduck-bootlog.service 2>/dev/null || true
+
+      echo " Rebuilding the initramfs for the Plymouth splash (this may take a moment)..."
+      update-initramfs -u 2>/dev/null || true
+    fi
 
     echo "-----------------------------------------------------------------"
     echo " cosmoduck-niri installed."

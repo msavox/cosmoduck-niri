@@ -5,6 +5,16 @@ case "$1" in
   remove|purge)
     rm -f /etc/ld.so.conf.d/cosmoduck-niri.conf
     ldconfig 2>/dev/null || true
+
+    # de-register the Plymouth theme (update-alternatives reverts default.plymouth
+    # to the next-highest, e.g. Ubuntu's System8) and rebuild the initramfs so the
+    # cosmoduck splash + its early kernel-log feeder are dropped from it.
+    if command -v update-alternatives >/dev/null 2>&1; then
+      update-alternatives --remove default.plymouth \
+        /usr/share/plymouth/themes/cosmoduck/cosmoduck.plymouth 2>/dev/null || true
+    fi
+    systemctl daemon-reload 2>/dev/null || true
+    update-initramfs -u 2>/dev/null || true
     ;;
 esac
 
