@@ -11,7 +11,11 @@ from gi.repository import Gtk, Gio, GLib, Pango  # noqa: E402
 
 CFG_DIR = os.path.expanduser("~/.config/waybar")
 APPS_JSON = f"{CFG_DIR}/dock-apps.json"
+CONFIG_JSON = f"{CFG_DIR}/dock-config.json"
 DOCK_GEN = f"{CFG_DIR}/dock-gen.sh"
+DEFAULT_HEIGHT = 52
+HEIGHT_MIN = 36
+HEIGHT_MAX = 96
 DEFAULT_COLORS = [
     "#8aadf4", "#8bd5ca", "#f5a97f", "#a6da95",
     "#f5bde6", "#eed49f", "#c6a0f6", "#ed8796",
@@ -31,6 +35,28 @@ def load_apps():
 def save_apps(apps):
     with open(APPS_JSON, "w") as f:
         json.dump(apps, f, indent=2)
+        f.write("\n")
+
+
+def load_height():
+    try:
+        with open(CONFIG_JSON) as f:
+            h = int(json.load(f).get("height", DEFAULT_HEIGHT))
+    except Exception:
+        h = DEFAULT_HEIGHT
+    return max(HEIGHT_MIN, min(HEIGHT_MAX, h))
+
+
+def save_height(height):
+    cfg = {}
+    try:
+        with open(CONFIG_JSON) as f:
+            cfg = json.load(f)
+    except Exception:
+        cfg = {}
+    cfg["height"] = int(height)
+    with open(CONFIG_JSON, "w") as f:
+        json.dump(cfg, f, indent=2)
         f.write("\n")
 
 
@@ -138,15 +164,57 @@ class DockManager(Gtk.ApplicationWindow):
         save_btn.connect("clicked", self.on_save)
         header.pack_end(save_btn)
 
+        self.height_val = load_height()
+
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+
+        vbox.pack_start(self._make_height_row(), False, False, 0)
+        vbox.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
+                        False, False, 0)
+
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.listbox = Gtk.ListBox()
         self.listbox.set_selection_mode(Gtk.SelectionMode.NONE)
         scroll.add(self.listbox)
-        self.add(scroll)
+        vbox.pack_start(scroll, True, True, 0)
+        self.add(vbox)
 
         self._refresh()
         self.show_all()
+
+    def _make_height_row(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        box.set_margin_start(12); box.set_margin_end(12)
+        box.set_margin_top(10); box.set_margin_bottom(10)
+
+        lbl = Gtk.Label(xalign=0)
+        lbl.set_markup("<b>Dock height</b>")
+        box.pack_start(lbl, False, False, 0)
+
+        self.height_scale = Gtk.Scale.new_with_range(
+            Gtk.Orientation.HORIZONTAL, HEIGHT_MIN, HEIGHT_MAX, 2)
+        self.height_scale.set_value(self.height_val)
+        self.height_scale.set_draw_value(False)
+        self.height_scale.set_hexpand(True)
+        for mark in (HEIGHT_MIN, DEFAULT_HEIGHT, HEIGHT_MAX):
+            self.height_scale.add_mark(mark, Gtk.PositionType.BOTTOM, None)
+        self.height_scale.connect("value-changed", self._on_height_changed)
+        box.pack_start(self.height_scale, True, True, 0)
+
+        self.height_lbl = Gtk.Label()
+        self.height_lbl.set_width_chars(5)
+        self._update_height_label()
+        box.pack_start(self.height_lbl, False, False, 0)
+        return box
+
+    def _on_height_changed(self, scale):
+        self.height_val = int(round(scale.get_value()))
+        self._update_height_label()
+
+    def _update_height_label(self):
+        self.height_lbl.set_markup(
+            f"<span foreground='#8087a2'>{self.height_val} px</span>")
 
     def _refresh(self):
         for child in self.listbox.get_children():
@@ -294,8 +362,8 @@ class DockManager(Gtk.ApplicationWindow):
     def on_save(self, btn):
         try:
             save_apps(self.apps)
+            save_height(self.height_val)
             regen_dock()
-            self._info("Dock updated.")
         except Exception as e:
             self._error(f"Save failed:\n{e}")
 
