@@ -9,6 +9,9 @@ entry=$(jq -c --arg id "$id" '.[] | select(.id==$id)' "$apps")
 cmd=$(jq -r .command <<<"$entry")
 match=$(jq -r .match <<<"$entry")
 
+# Clear this app's notification badge on click (semantics "B").
+"$HOME/.config/waybar/notif-count.py" clear "$id" 2>/dev/null || true
+
 win_id=""
 if [[ -n "$match" ]]; then
   win_id=$(niri msg --json windows 2>/dev/null \

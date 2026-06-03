@@ -19,19 +19,35 @@ out_css="$cfg/dock-pinned.css"
 count=$(jq 'length' "$apps")
 (( count > 0 )) || { echo "dock-apps.json empty" >&2; exit 1; }
 
+# ── notification-count badge SVGs (regenerated if the folder is missing) ──
+# Solid dark-blue pill with a white number; values 1..9 and "9+".
+badges_dir="$cfg/badges"
+if [[ ! -d "$badges_dir" ]]; then
+  mkdir -p "$badges_dir"
+  _mkbadge() { # <key> <label> <font-size>
+    cat > "$badges_dir/badge-$1.svg" <<SVG
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <circle cx="8" cy="8" r="7.3" fill="#1e40af" stroke="#0a163f" stroke-width="1"/>
+  <text x="8" y="11.5" text-anchor="middle" font-family="sans-serif" font-size="$3" font-weight="bold" fill="#ffffff">$2</text>
+</svg>
+SVG
+  }
+  for n in 1 2 3 4 5 6 7 8 9; do _mkbadge "$n" "$n" 10; done
+  _mkbadge 9p "9+" 8
+fi
+
 ids=()
 post_ids=()
 pinned_ids=()
-while IFS= read -r entry; do
-  id=$(jq -r .id <<<"$entry")
-  post=$(jq -r '.post_taskbar // false' <<<"$entry")
+# Single jq (TSV) instead of 3 jq per app: id <tab> post_taskbar.
+while IFS=$'\t' read -r id post; do
   ids+=("$id")
   if [[ "$post" == "true" ]]; then
     post_ids+=("$id")
   else
     pinned_ids+=("$id")
   fi
-done < <(jq -c '.[]' "$apps")
+done < <(jq -r '.[] | "\(.id)\t\(.post_taskbar // false)"' "$apps")
 
 # Backward-compat: if no post_taskbar, move the last one into post
 if (( ${#post_ids[@]} == 0 )); then
@@ -55,23 +71,36 @@ done
 center+=']'
 
 # ── per-app module blocks (custom/<id>) ──────────────────────────────
-modules=""
-for id in "${ids[@]}"; do
-  modules+="$(jq -nc --arg id "$id" \
-    '{
-      ("custom/"+$id): {
-        "exec": ("__HOME__/.config/waybar/dock-status.sh " + $id),
-        "interval": 1,
-        "return-type": "json",
-        "tooltip": true,
-        "on-click": ("__HOME__/.config/waybar/dock-click.sh " + $id)
-      }
-    }')"
-  modules+=$'\n'
-done
+# A single jq builds the object with ALL modules (instead of one per app).
+modules_json=$(jq -c '
+  [ .[].id
+    | { ("custom/"+.): {
+          "exec": ("__HOME__/.config/waybar/dock-status.sh " + .),
+          "interval": 1,
+          "return-type": "json",
+          "tooltip": true,
+          "on-click": ("__HOME__/.config/waybar/dock-click.sh " + .)
+        } }
+  ] | add' "$apps")
 
 # ── wlr/taskbar ignore-list: all app_ids declared in the pinned entries ──
 ignore_json=$(jq -c '[.[].app_ids // [] | .[]] | unique' "$apps")
+
+# ── dock sizes derived from height (slider in dock-manager) ───────────
+# Source: dock-config.json {"height": N}. Everything scales proportionally
+# to the H=52 baseline (icons, modules, radius, badge), so the slider sets
+# the height and the icon size follows.
+H=$(jq -r '.height // 52' "$cfg/dock-config.json" 2>/dev/null || echo 52)
+[[ "$H" =~ ^[0-9]+$ ]] || H=52
+(( H < 36 )) && H=36
+(( H > 110 )) && H=110
+icon_size=$(( H * 32 / 52 ))   # wlr/taskbar icon-size
+mod_h=$(( H * 40 / 52 ))       # module min-height
+mod_w=$(( H * 36 / 52 ))       # module min-width
+bg_size=$(( H * 28 / 52 ))     # icon (background-size)
+radius=$(( H * 12 / 52 ))      # border-radius
+badge_px=$(( H * 17 / 52 ))    # notification badge
+(( badge_px < 13 )) && badge_px=13
 
 # ── compose final dock.jsonc ─────────────────────────────────────────
 {
@@ -80,11 +109,13 @@ ignore_json=$(jq -c '[.[].app_ids // [] | .[]] | unique' "$apps")
   jq -n \
     --argjson center "$center" \
     --argjson ignore "$ignore_json" \
-    --slurpfile mods <(printf '%s' "$modules" | jq -s 'add') \
+    --argjson height "$H" \
+    --argjson icon_size "$icon_size" \
+    --argjson mods "$modules_json" \
     '{
       "layer": "top",
       "position": "bottom",
-      "height": 52,
+      "height": $height,
       "spacing": 6,
       "margin-bottom": 10,
       "margin-left": 6,
@@ -94,14 +125,30 @@ ignore_json=$(jq -c '[.[].app_ids // [] | .[]] | unique' "$apps")
       "modules-right": [],
       "wlr/taskbar": {
         "format": "{icon}",
-        "icon-size": 32,
+        "icon-size": $icon_size,
         "tooltip-format": "{title}",
         "on-click": "activate",
         "on-click-middle": "close",
         "ignore-list": $ignore
       }
-    } * $mods[0]'
+    } * $mods'
 } > "$out_json"
+
+# ── resolve icons in a SINGLE pass (icon_name -> file) ───────────────
+# This used to launch python+Gtk for EVERY app (slow: ~one interpreter
+# start per app = several seconds). Here a single process resolves them all.
+declare -A ICON_PATHS
+while IFS=$'\t' read -r in_name in_path; do
+  [[ -n "$in_name" ]] && ICON_PATHS["$in_name"]="$in_path"
+done < <(jq -r '.[].icon_name // empty' "$apps" | sort -u | python3 -c '
+import sys, gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
+theme = Gtk.IconTheme.get_default()
+for name in (l.strip() for l in sys.stdin if l.strip()):
+    info = theme.lookup_icon(name, 48, 0)
+    print(name + "\t" + (info.get_filename() if info else ""))
+')
 
 # ── dock-pinned.css: common rules + icon from GTK theme + color ──────
 {
@@ -118,13 +165,13 @@ ignore_json=$(jq -c '[.[].app_ids // [] | .[]] | unique' "$apps")
   echo "${joined} {"
   echo "  padding: 0;"
   echo "  margin: 6px 3px;"
-  echo "  min-width: 36px;"
-  echo "  min-height: 40px;"
-  echo "  border-radius: 12px;"
+  echo "  min-width: ${mod_w}px;"
+  echo "  min-height: ${mod_h}px;"
+  echo "  border-radius: ${radius}px;"
   echo "  background-color: transparent;"
   echo "  background-repeat: no-repeat;"
   echo "  background-position: center 30%;"
-  echo "  background-size: 28px 28px;"
+  echo "  background-size: ${bg_size}px ${bg_size}px;"
   echo "  transition: background-color 120ms ease;"
   echo "}"
 
@@ -146,31 +193,33 @@ ignore_json=$(jq -c '[.[].app_ids // [] | .[]] | unique' "$apps")
   # Emitted per-icon in the loop below as a background layer, so it stays
   # centered and does not cover the icon. Bar width = 50%, thickness 3px.
 
-  while IFS= read -r entry; do
-    id=$(jq -r .id        <<<"$entry")
-    color=$(jq -r .color  <<<"$entry")
-    icon_name=$(jq -r '.icon_name // ""' <<<"$entry")
-    icon_path=""
-    if [[ -n "$icon_name" ]]; then
-      icon_path=$(python3 - "$icon_name" <<'PY'
-import sys, gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
-name = sys.argv[1]
-info = Gtk.IconTheme.get_default().lookup_icon(name, 48, 0)
-print(info.get_filename() if info else "")
-PY
-)
-    fi
+  while IFS=$'\t' read -r id color icon_name; do
+    icon_path="${ICON_PATHS[$icon_name]:-}"
     bar="linear-gradient(#d6edff, #d6edff)"   # solid bar (light blue toward white)
+    bpos="100% 0%"       # badge: outer top-right corner of the icon
+    bsize="${badge_px}px ${badge_px}px"
+    isize="${bg_size}px ${bg_size}px"
+    # NB: in multiple background-image layers the FIRST one is on top.
+    # The badge must come first so it sits ON the icon (otherwise hidden).
     if [[ -n "$icon_path" ]]; then
-      echo "#custom-${id} { background-image: url(\"${icon_path}\"); color: ${color}; }"
-      echo "#custom-${id}.running { background-image: url(\"${icon_path}\"), ${bar}; background-size: 28px 28px, 50% 3px; background-position: center 30%, center bottom; background-repeat: no-repeat, no-repeat; }"
+      ic="url(\"${icon_path}\")"
+      echo "#custom-${id} { background-image: ${ic}; color: ${color}; }"
+      echo "#custom-${id}.running { background-image: ${ic}, ${bar}; background-size: ${isize}, 50% 3px; background-position: center 30%, center bottom; background-repeat: no-repeat, no-repeat; }"
+      for k in 1 2 3 4 5 6 7 8 9 9p; do
+        bg="url(\"${badges_dir}/badge-${k}.svg\")"
+        echo "#custom-${id}.nb${k} { background-image: ${bg}, ${ic}; background-size: ${bsize}, ${isize}; background-position: ${bpos}, center 30%; background-repeat: no-repeat, no-repeat; }"
+        echo "#custom-${id}.running.nb${k} { background-image: ${bg}, ${ic}, ${bar}; background-size: ${bsize}, ${isize}, 50% 3px; background-position: ${bpos}, center 30%, center bottom; background-repeat: no-repeat, no-repeat, no-repeat; }"
+      done
     else
       echo "#custom-${id} { color: ${color}; }"
       echo "#custom-${id}.running { background-image: ${bar}; background-size: 50% 3px; background-position: center bottom; background-repeat: no-repeat; }"
+      for k in 1 2 3 4 5 6 7 8 9 9p; do
+        bg="url(\"${badges_dir}/badge-${k}.svg\")"
+        echo "#custom-${id}.nb${k} { background-image: ${bg}; background-size: ${bsize}; background-position: ${bpos}; background-repeat: no-repeat; }"
+        echo "#custom-${id}.running.nb${k} { background-image: ${bg}, ${bar}; background-size: ${bsize}, 50% 3px; background-position: ${bpos}, center bottom; background-repeat: no-repeat, no-repeat; }"
+      done
     fi
-  done < <(jq -c '.[]' "$apps")
+  done < <(jq -r '.[] | "\(.id)\t\(.color)\t\(.icon_name // "")"' "$apps")
 } > "$out_css"
 
 # ── restart dock waybar ──────────────────────────────────────────────

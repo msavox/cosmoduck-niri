@@ -29,14 +29,13 @@
   "hide-on-action": true,
   "script-fail-notify": true,
   "scripts": {
-    "example-script": {
-      "exec": "echo 'Do something...'",
-      "urgency": "Normal"
-    },
-    "example-action-script": {
-      "exec": "echo 'Do something actionable!'",
-      "urgency": "Normal",
+    "focus-on-click": {
+      "exec": "__HOME__/.config/niri/notif-focus.py",
       "run-on": "action"
+    },
+    "count-on-receive": {
+      "exec": "/usr/bin/python3 __HOME__/.config/waybar/notif-count.py receive",
+      "run-on": "receive"
     }
   },
   "notification-visibility": {

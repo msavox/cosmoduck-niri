@@ -70,8 +70,8 @@ You can rebuild the `.deb` yourself afterwards with
 | | |
 |---|---|
 | **Compositor** | niri `v26.04` + jammy patches |
-| **Bar & dock** | waybar top bar, macOS-style pinned dock with running indicators |
-| **Notifications** | SwayNotificationCenter (swaync) |
+| **Bar & dock** | waybar top bar, macOS-style pinned dock with running indicators, per-app notification badges, and adjustable height (slider in the dock manager) |
+| **Notifications** | SwayNotificationCenter (swaync); clicking a notification focuses the source app's window |
 | **Lock** | swaylock over a blurred wallpaper |
 | **Widget** | conky "Cosmoduck" bridged onto niri's background layer |
 | **Cheatsheet** | custom 3-column keyboard cheatsheet (F1), auto-built from your keybinds, shown at first login |

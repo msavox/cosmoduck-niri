@@ -108,6 +108,7 @@ spawn-at-startup "waybar" "-c" "__HOME__/.config/waybar/dock.jsonc" "-s" "__HOME
 spawn-sh-at-startup "sleep 1 && __HOME__/.config/waybar/tray-toggle.sh start-if-open"
 spawn-at-startup "/usr/libexec/gsd-rfkill"
 spawn-at-startup "swaync" "-c" "__HOME__/.config/swaync/config.json" "-s" "__HOME__/.config/swaync/style.css"
+spawn-at-startup "/usr/bin/python3" "__HOME__/.config/waybar/notif-count.py" "daemon"
 spawn-sh-at-startup "__HOME__/.config/niri/gnome-wallpaper-sync.sh"
 spawn-at-startup "/usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1"
 spawn-at-startup "ulauncher" "--hide-window"
