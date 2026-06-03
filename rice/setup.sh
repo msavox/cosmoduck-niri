@@ -44,7 +44,7 @@ if [ -d "$THEMES" ]; then
 fi
 
 # 4. replace the __HOME__ placeholder with the real home in every text file
-TARGETS="$CFG/niri $CFG/waybar $CFG/swaync $CFG/conky $HOME/.local/bin/lid-keep-awake $CFG/systemd/user/lid-keep-awake.service"
+TARGETS="$CFG/niri $CFG/waybar $CFG/swaync $CFG/conky $CFG/xdg-desktop-portal-wlr $HOME/.local/bin/lid-keep-awake $CFG/systemd/user/lid-keep-awake.service"
 grep -rIl '__HOME__' $TARGETS 2>/dev/null | while read -r f; do
   sed -i "s#__HOME__#$HOME#g" "$f"
 done

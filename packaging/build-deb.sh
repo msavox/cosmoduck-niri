@@ -18,7 +18,7 @@ RICE="$REPO/rice"
 ROOT="$HERE/build/pkgroot"
 PREFIX="${PREFIX:-/usr/local}"
 PKG="cosmoduck-niri"
-VER="1.0.2"
+VER="1.0.3"
 ARCH="amd64"
 
 echo ">> reset staging"

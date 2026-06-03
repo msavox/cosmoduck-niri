@@ -1,9 +1,11 @@
 # xdg-desktop-portal-wlr screencast chooser.
-# dmenu mode: xdpw pipes the output (monitor) names to wofi --dmenu and uses
-# the selected one. With a single monitor xdpw auto-selects it (no prompt).
+# dmenu mode: xdpw pipes the output (monitor) names to the chooser script, which
+# annotates each with (laptop) / (external · Vendor) — read from `niri msg
+# outputs` — before showing them in wofi. See niri/screencast-chooser.sh.
+# With a single monitor xdpw auto-selects it (no prompt).
 # Switch back to `chooser_type=simple` / `chooser_cmd=slurp -f %o -or` to pick
 # the monitor by clicking on it instead of choosing from a list.
 [screencast]
 chooser_type=dmenu
-chooser_cmd=wofi --dmenu --prompt "Select monitor to share"
+chooser_cmd=__HOME__/.config/niri/screencast-chooser.sh
 max_fps=30
