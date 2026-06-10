@@ -60,6 +60,22 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("DbusmenuGtk3", "0.4")
 from gi.repository import Gtk, Gdk, GLib, Gio, GdkPixbuf, DbusmenuGtk3  # noqa: E402
 
+# Position the dropdown with gtk-layer-shell, anchored just under its toggle —
+# the same robust mechanism the dock context menu uses. See ctxmenu.py.
+try:
+    gi.require_version("GtkLayerShell", "0.1")
+    from gi.repository import GtkLayerShell  # noqa: E402
+    from ctxmenu import focused_monitor  # noqa: E402
+    HAVE_LAYER_SHELL = True
+except (ValueError, ImportError):
+    HAVE_LAYER_SHELL = False
+
+# Horizontal screen position (monitor-local px) of the tray-toggle chevron in the
+# top bar, used to center the dropdown under it. Calibrated by measurement; it
+# can drift slightly when the right-side modules' text changes width.
+CHEVRON_X = 2013
+TOPBAR_BOTTOM = 44   # top bar: height 30 + margin-top 8 + a small gap
+
 # app-id used for niri's window-rule (open-floating + positioning)
 GLib.set_prgname("tray-dropdown")
 GLib.set_application_name("tray-dropdown")
@@ -253,9 +269,14 @@ def main():
     win = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
     win.set_decorated(False)
     win.set_resizable(False)
-    # CSS aligned with the waybar look (Catppuccin Macchiato)
+    # CSS aligned with the waybar look (Catppuccin Macchiato). The window itself
+    # is transparent (it is a full-screen click-catcher); the visible panel is
+    # the .tray-card box inside it.
     css = b"""
     window {
+      background: transparent;
+    }
+    .tray-card {
       background: rgba(30, 30, 46, 0.95);
       border: 1px solid #494d64;
       border-radius: 16px;
@@ -295,40 +316,73 @@ def main():
     )
     win.set_skip_taskbar_hint(True)
     win.set_skip_pager_hint(True)
-    win.set_keep_above(True)
     win.set_title("tray-dropdown")
     win.set_role("tray-dropdown")
     win.set_name("tray-dropdown")
-    # app-id on Wayland comes from Gdk.set_program_class / set_prgname
+    win.set_app_paintable(True)
+    _vis = win.get_screen().get_rgba_visual()
+    if _vis is not None:
+        win.set_visual(_vis)
 
-    hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-    hbox.set_margin_start(2); hbox.set_margin_end(2)
-    hbox.set_margin_top(0); hbox.set_margin_bottom(0)
+    # The visible panel is a card; the window around it is the transparent
+    # full-screen click-catcher.
+    card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+    card.get_style_context().add_class("tray-card")
+    card.set_margin_start(2); card.set_margin_end(2)
     on_action = lambda: GLib.idle_add(Gtk.main_quit)
     if not items:
         lbl = Gtk.Label(label="  (no active tray icons)  ")
         lbl.set_margin_top(8); lbl.set_margin_bottom(8); lbl.set_margin_start(12); lbl.set_margin_end(12)
-        hbox.pack_start(lbl, False, False, 0)
+        card.pack_start(lbl, False, False, 0)
     else:
         for it in items:
-            hbox.pack_start(make_row(bus, it, on_action), False, False, 0)
-    win.add(hbox)
+            card.pack_start(make_row(bus, it, on_action), False, False, 0)
 
-    # close on focus-out (with 300ms grace period) and Esc
-    focus_out_armed = [False]
+    # Anchor the card under the chevron (top, centered on CHEVRON_X).
+    n_icons = max(1, len(items))
+    est_w = n_icons * 30 + 16 if items else 180
+    card.set_valign(Gtk.Align.START)
+    card.set_margin_top(TOPBAR_BOTTOM)
+    mw = 2560
+    if HAVE_LAYER_SHELL:
+        mon, _mx, mw = focused_monitor()
+        GtkLayerShell.init_for_window(win)
+        if mon is not None:
+            GtkLayerShell.set_monitor(win, mon)
+        GtkLayerShell.set_layer(win, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_keyboard_mode(win, GtkLayerShell.KeyboardMode.ON_DEMAND)
+        for edge in (GtkLayerShell.Edge.TOP, GtkLayerShell.Edge.BOTTOM,
+                     GtkLayerShell.Edge.LEFT, GtkLayerShell.Edge.RIGHT):
+            GtkLayerShell.set_anchor(win, edge, True)
+        GtkLayerShell.set_exclusive_zone(win, -1)
+    else:
+        win.set_keep_above(True)
+    left = max(4, min(int(CHEVRON_X - est_w / 2), int(mw) - est_w - 4))
+    card.set_halign(Gtk.Align.START)
+    card.set_margin_start(left)
+    win.add(card)
 
-    def on_focus_out(*_):
-        if focus_out_armed[0]:
+    # Refine the horizontal position once the real card width is known.
+    def refine_position():
+        w = card.get_allocated_width()
+        if w > 1:
+            nl = max(4, min(int(CHEVRON_X - w / 2), int(mw) - w - 4))
+            card.set_margin_start(nl)
+        return False
+    GLib.timeout_add(60, refine_position)
+
+    # Dismiss on a click outside the card (no seat grab -> can never lock input).
+    win.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+
+    def on_press(_w, ev):
+        a = card.get_allocation()
+        inside = (a.x <= ev.x <= a.x + a.width and a.y <= ev.y <= a.y + a.height)
+        if not inside:
             Gtk.main_quit()
+            return True
         return False
-
-    win.connect("focus-out-event", on_focus_out)
+    win.connect("button-press-event", on_press)
     win.connect("destroy", lambda *_: Gtk.main_quit())
-
-    def arm_focus_out():
-        focus_out_armed[0] = True
-        return False
-    GLib.timeout_add(350, arm_focus_out)
 
     def on_key(_w, ev):
         if ev.keyval == Gdk.KEY_Escape:
@@ -336,6 +390,10 @@ def main():
             return True
         return False
     win.connect("key-press-event", on_key)
+
+    # Hard safety net: never let the dropdown get stuck open (click-outside and
+    # Esc are the primary exits; this is only a backstop).
+    GLib.timeout_add(15000, lambda: (Gtk.main_quit(), False)[1])
 
     win.show_all()
     Gtk.main()
