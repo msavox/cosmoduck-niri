@@ -94,6 +94,22 @@ window, eventbox { background: transparent; }
 """
 
 
+def _rm_recursive(gfile):
+    """Permanent delete; gio's delete is non-recursive, so walk directories."""
+    info = gfile.query_info(Gio.FILE_ATTRIBUTE_STANDARD_TYPE,
+                            Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, None)
+    if info.get_file_type() == Gio.FileType.DIRECTORY:
+        en = gfile.enumerate_children(Gio.FILE_ATTRIBUTE_STANDARD_NAME,
+                                      Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, None)
+        while True:
+            child = en.next_file(None)
+            if child is None:
+                break
+            _rm_recursive(gfile.get_child(child.get_name()))
+        en.close(None)
+    gfile.delete(None)
+
+
 def translate(src, dest, x, y):
     """Widget-to-widget coordinate translation that tolerates either PyGObject
     return shape — (dest_x, dest_y) or (ok, dest_x, dest_y). Returns (x, y) or
@@ -218,7 +234,9 @@ class Desktop:
         if mon is not None:
             GtkLayerShell.set_monitor(self.win, mon)
         GtkLayerShell.set_layer(self.win, GtkLayerShell.Layer.BOTTOM)
-        GtkLayerShell.set_keyboard_mode(self.win, GtkLayerShell.KeyboardMode.NONE)
+        # ON_DEMAND: the desktop takes keyboard focus when clicked (so Delete /
+        # Shift+Delete act on the selection) and releases it to apps otherwise.
+        GtkLayerShell.set_keyboard_mode(self.win, GtkLayerShell.KeyboardMode.ON_DEMAND)
         for edge in (GtkLayerShell.Edge.TOP, GtkLayerShell.Edge.BOTTOM,
                      GtkLayerShell.Edge.LEFT, GtkLayerShell.Edge.RIGHT):
             GtkLayerShell.set_anchor(self.win, edge, True)
@@ -238,6 +256,7 @@ class Desktop:
             w.connect("button-release-event", self.on_marquee_release)
         self.bg.add(self.fixed)
         self.win.add(self.bg)
+        self.win.connect("key-press-event", self.on_key)
         self.win.connect("destroy", lambda *_: Gtk.main_quit())
 
         # The desktop is a drop target: dragging files here from another app (or
@@ -411,6 +430,66 @@ class Desktop:
                 ctx.add_class("selected")
             else:
                 ctx.remove_class("selected")
+
+    # ── keyboard ───────────────────────────────────────────────────────
+    def _selected_icons(self):
+        return [i for i in self.icons if i.name in self.selected]
+
+    def on_key(self, widget, event):
+        kv = event.keyval
+        shift = bool(event.state & Gdk.ModifierType.SHIFT_MASK)
+        ctrl = bool(event.state & Gdk.ModifierType.CONTROL_MASK)
+        if kv in (Gdk.KEY_Delete, Gdk.KEY_KP_Delete) and self.selected:
+            if shift:
+                self._delete_selected()
+            else:
+                self._trash_selected()
+            return True
+        if kv == Gdk.KEY_a and ctrl:
+            self._set_selected({i.name for i in self.icons})
+            return True
+        if kv == Gdk.KEY_Escape:
+            self._set_selected(set())
+            return True
+        if kv in (Gdk.KEY_Return, Gdk.KEY_KP_Enter) and self.selected:
+            for ic in self._selected_icons():
+                ic.open()
+            return True
+        return False
+
+    def _trash_selected(self):
+        for ic in self._selected_icons():
+            try:
+                ic.gfile.trash(None)
+            except GLib.Error as e:
+                sys.stderr.write(f"desktop.py: trash {ic.name}: {e}\n")
+        self.selected = set()
+
+    def _delete_selected(self):
+        icons = self._selected_icons()
+        if not icons:
+            return
+        n = len(icons)
+        msg = (f"Permanently delete “{icons[0].display_name}”?" if n == 1
+               else f"Permanently delete {n} items?")
+        dlg = Gtk.MessageDialog(
+            transient_for=None, modal=True, message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.NONE, text=msg,
+            secondary_text="This can’t be undone.")
+        dlg.add_button("Cancel", Gtk.ResponseType.CANCEL)
+        dlg.add_button("Delete", Gtk.ResponseType.OK).get_style_context() \
+            .add_class("destructive-action")
+        dlg.set_default_response(Gtk.ResponseType.CANCEL)
+        resp = dlg.run()
+        dlg.destroy()
+        if resp != Gtk.ResponseType.OK:
+            return
+        for ic in icons:
+            try:
+                _rm_recursive(ic.gfile)
+            except GLib.Error as e:
+                sys.stderr.write(f"desktop.py: delete {ic.name}: {e}\n")
+        self.selected = set()
 
     # ── events ─────────────────────────────────────────────────────────
     def on_cell_press(self, widget, event, ic):
