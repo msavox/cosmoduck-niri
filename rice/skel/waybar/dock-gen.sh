@@ -79,7 +79,8 @@ modules_json=$(jq -c '
           "interval": 1,
           "return-type": "json",
           "tooltip": true,
-          "on-click": ("__HOME__/.config/waybar/dock-click.sh " + .)
+          "on-click": ("__HOME__/.config/waybar/dock-click.sh " + .),
+          "on-click-right": ("/usr/bin/python3 __HOME__/.config/waybar/dock-menu.py " + .)
         } }
   ] | add' "$apps")
 
@@ -101,6 +102,30 @@ bg_size=$(( H * 28 / 52 ))     # icon (background-size)
 radius=$(( H * 12 / 52 ))      # border-radius
 badge_px=$(( H * 17 / 52 ))    # notification badge
 (( badge_px < 13 )) && badge_px=13
+
+# ── running indicator: split the bar into N equal segments ─────────────
+# seg_bar <n> echoes a CSS gradient painting N segments of equal width,
+# separated by gaps, across the SAME 50%-wide band (so the total width is
+# constant regardless of the number of open instances). n=1 is a solid bar.
+# Stops are emitted in tenths-of-percent for crisp, symmetric hard edges.
+MAXSEG=4
+seg_bar() {
+  local n=$1
+  if (( n <= 1 )); then printf 'linear-gradient(#d6edff, #d6edff)'; return; fi
+  local gap=70 total=1000          # gap between segments, in tenths of a percent
+  local seg=$(( (total - (n-1)*gap) / n ))
+  local i pos=0 out='linear-gradient(90deg'
+  for ((i=0; i<n; i++)); do
+    local s=$pos e=$((pos+seg))
+    out+=", #d6edff $((s/10)).$((s%10))%, #d6edff $((e/10)).$((e%10))%"
+    if (( i < n-1 )); then
+      pos=$((e+gap))
+      out+=", transparent $((e/10)).$((e%10))%, transparent $((pos/10)).$((pos%10))%"
+    fi
+  done
+  out+=')'
+  printf '%s' "$out"
+}
 
 # ── compose final dock.jsonc ─────────────────────────────────────────
 {
@@ -192,10 +217,17 @@ for name in (l.strip() for l in sys.stdin if l.strip()):
   # "running" indicator: short centered bar at the bottom (NOT full-width).
   # Emitted per-icon in the loop below as a background layer, so it stays
   # centered and does not cover the icon. Bar width = 50%, thickness 3px.
+  # With N open instances the bar splits into N segments (class instN, set by
+  # dock-status.sh) within the SAME 50% band — see seg_bar() above. The bar
+  # layer is always the LAST background-image layer (under icon + badge).
+
+  # Precompute the segment gradients once (identical for every app).
+  declare -A SEGBAR
+  for ((s=2; s<=MAXSEG; s++)); do SEGBAR[$s]=$(seg_bar "$s"); done
 
   while IFS=$'\t' read -r id color icon_name; do
     icon_path="${ICON_PATHS[$icon_name]:-}"
-    bar="linear-gradient(#d6edff, #d6edff)"   # solid bar (light blue toward white)
+    bar="linear-gradient(#d6edff, #d6edff)"   # solid bar (light blue toward white), n=1
     bpos="100% 0%"       # badge: outer top-right corner of the icon
     bsize="${badge_px}px ${badge_px}px"
     isize="${bg_size}px ${bg_size}px"
@@ -205,18 +237,30 @@ for name in (l.strip() for l in sys.stdin if l.strip()):
       ic="url(\"${icon_path}\")"
       echo "#custom-${id} { background-image: ${ic}; color: ${color}; }"
       echo "#custom-${id}.running { background-image: ${ic}, ${bar}; background-size: ${isize}, 50% 3px; background-position: center 30%, center bottom; background-repeat: no-repeat, no-repeat; }"
+      for ((s=2; s<=MAXSEG; s++)); do
+        echo "#custom-${id}.running.inst${s} { background-image: ${ic}, ${SEGBAR[$s]}; background-size: ${isize}, 50% 3px; background-position: center 30%, center bottom; background-repeat: no-repeat, no-repeat; }"
+      done
       for k in 1 2 3 4 5 6 7 8 9 9p; do
         bg="url(\"${badges_dir}/badge-${k}.svg\")"
         echo "#custom-${id}.nb${k} { background-image: ${bg}, ${ic}; background-size: ${bsize}, ${isize}; background-position: ${bpos}, center 30%; background-repeat: no-repeat, no-repeat; }"
         echo "#custom-${id}.running.nb${k} { background-image: ${bg}, ${ic}, ${bar}; background-size: ${bsize}, ${isize}, 50% 3px; background-position: ${bpos}, center 30%, center bottom; background-repeat: no-repeat, no-repeat, no-repeat; }"
+        for ((s=2; s<=MAXSEG; s++)); do
+          echo "#custom-${id}.running.inst${s}.nb${k} { background-image: ${bg}, ${ic}, ${SEGBAR[$s]}; background-size: ${bsize}, ${isize}, 50% 3px; background-position: ${bpos}, center 30%, center bottom; background-repeat: no-repeat, no-repeat, no-repeat; }"
+        done
       done
     else
       echo "#custom-${id} { color: ${color}; }"
       echo "#custom-${id}.running { background-image: ${bar}; background-size: 50% 3px; background-position: center bottom; background-repeat: no-repeat; }"
+      for ((s=2; s<=MAXSEG; s++)); do
+        echo "#custom-${id}.running.inst${s} { background-image: ${SEGBAR[$s]}; background-size: 50% 3px; background-position: center bottom; background-repeat: no-repeat; }"
+      done
       for k in 1 2 3 4 5 6 7 8 9 9p; do
         bg="url(\"${badges_dir}/badge-${k}.svg\")"
         echo "#custom-${id}.nb${k} { background-image: ${bg}; background-size: ${bsize}; background-position: ${bpos}; background-repeat: no-repeat; }"
         echo "#custom-${id}.running.nb${k} { background-image: ${bg}, ${bar}; background-size: ${bsize}, 50% 3px; background-position: ${bpos}, center bottom; background-repeat: no-repeat, no-repeat; }"
+        for ((s=2; s<=MAXSEG; s++)); do
+          echo "#custom-${id}.running.inst${s}.nb${k} { background-image: ${bg}, ${SEGBAR[$s]}; background-size: ${bsize}, 50% 3px; background-position: ${bpos}, center bottom; background-repeat: no-repeat, no-repeat; }"
+        done
       done
     fi
   done < <(jq -r '.[] | "\(.id)\t\(.color)\t\(.icon_name // "")"' "$apps")

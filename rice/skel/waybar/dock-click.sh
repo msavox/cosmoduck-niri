@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# dock-click.sh <id>
-# If the app is already open, focus it. Otherwise launch it.
+# dock-click.sh <id> [new]
+# Default: if the app is already open, focus it; otherwise launch it.
+# With "new" as the 2nd argument: always launch a fresh instance (used by the
+# right-click context menu's "New Window" entry, see dock-menu.py).
 set -euo pipefail
 id="${1:?missing app id}"
+mode="${2:-}"
 apps="$HOME/.config/waybar/dock-apps.json"
 
 entry=$(jq -c --arg id "$id" '.[] | select(.id==$id)' "$apps")
@@ -13,7 +16,7 @@ match=$(jq -r .match <<<"$entry")
 "$HOME/.config/waybar/notif-count.py" clear "$id" 2>/dev/null || true
 
 win_id=""
-if [[ -n "$match" ]]; then
+if [[ -n "$match" && "$mode" != "new" ]]; then
   win_id=$(niri msg --json windows 2>/dev/null \
     | jq -r --arg m "$match" '[.[] | select(.app_id != null and (.app_id | test($m)))][0].id // empty')
 fi

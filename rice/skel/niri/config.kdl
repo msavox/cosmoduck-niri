@@ -186,6 +186,20 @@ window-rule {
     }
 }
 
+// Dock context menu (right-click on a dock icon) -> floating, anchored just
+// above the dock at the bottom-center of the screen.
+window-rule {
+    match app-id=r#"^dock-menu$"#
+    open-floating true
+    default-floating-position x=0 y=80 relative-to="bottom"
+    focus-ring {
+        off
+    }
+    border {
+        off
+    }
+}
+
 // Conky (Cosmoduck) -> the visible rendering is done by conky-bg.py via
 // layer-shell BACKGROUND. The niri toplevel of conky must stay active
 // (so the X server sends it Damage) but invisible above the apps.

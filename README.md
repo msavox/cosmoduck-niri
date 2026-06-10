@@ -45,7 +45,7 @@ screenshots.
 Grab the `.deb` from the [**latest release**](https://github.com/msavox/cosmoduck-niri/releases/latest), then:
 
 ```bash
-sudo apt install ./cosmoduck-niri_1.1.0_amd64.deb   # pulls all runtime deps
+sudo apt install ./cosmoduck-niri_1.2.0_amd64.deb   # pulls all runtime deps
 cosmoduck-niri-setup                                 # run as your user, NOT sudo
 ```
 
@@ -70,7 +70,7 @@ You can rebuild the `.deb` yourself afterwards with
 | | |
 |---|---|
 | **Compositor** | niri `v26.04` + jammy patches |
-| **Bar & dock** | waybar top bar with a macOS-style close-window button, plus a macOS-style pinned dock with running indicators, per-app notification badges, and adjustable height (slider in the dock manager) |
+| **Bar & dock** | waybar top bar with a macOS-style close-window button, plus a macOS-style pinned dock with running indicators that split into one segment per open window, per-app notification badges, a right-click context menu (New Window / focus each instance / Close / Force Quit), and adjustable height (slider in the dock manager) |
 | **Notifications** | SwayNotificationCenter (swaync); clicking a notification focuses the source app's window |
 | **Lock** | swaylock-effects over a blurred wallpaper, with the Cosmoduck duck composited in the lock ring |
 | **Boot splash** | Plymouth "cosmoduck" theme — duck + loading bar over a scrolling kernel/systemd log (set up automatically; reverts on uninstall) |
