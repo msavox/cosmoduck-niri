@@ -109,7 +109,9 @@ def open_with(path, appinfo):
 
 
 def open_with_chooser(path):
-    """Full 'Open With…' picker (every installed app, GNOME-style)."""
+    """Full 'Open With…' picker (every installed app, GNOME-style), with an
+    'always use' checkbox that makes the choice the permanent default for this
+    file type (writes ~/.config/mimeapps.list via Gio)."""
     ct = _content_type(path) or "application/octet-stream"
     dlg = Gtk.AppChooserDialog.new_for_content_type(
         None, Gtk.DialogFlags.MODAL, ct)
@@ -118,10 +120,27 @@ def open_with_chooser(path):
     widget.set_show_recommended(True)
     widget.set_show_fallback(True)
     widget.set_show_other(True)
+
+    try:
+        desc = Gio.content_type_get_description(ct)
+    except Exception:
+        desc = ct
+    always = Gtk.CheckButton(label=f"Always use for “{desc}” files")
+    always.set_margin_start(12)
+    always.set_margin_bottom(8)
+    always.show()
+    dlg.get_content_area().pack_start(always, False, False, 0)
+
     resp = dlg.run()
     ai = dlg.get_app_info()
+    set_default = always.get_active()
     dlg.destroy()
     if resp == Gtk.ResponseType.OK and ai is not None:
+        if set_default:
+            try:
+                ai.set_as_default_for_type(ct)
+            except GLib.Error as e:
+                sys.stderr.write(f"set default for {ct}: {e}\n")
         open_with(path, ai)
 
 
