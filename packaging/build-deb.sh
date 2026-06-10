@@ -18,7 +18,7 @@ RICE="$REPO/rice"
 ROOT="$HERE/build/pkgroot"
 PREFIX="${PREFIX:-/usr/local}"
 PKG="cosmoduck-niri"
-VER="1.2.0"
+VER="1.3.0"
 ARCH="amd64"
 
 echo ">> reset staging"
@@ -91,6 +91,7 @@ SKEL="$ROOT/usr/share/$PKG/skel"
 rm -rf "$SKEL"
 install -d "$SKEL"
 cp -a "$RICE/skel/." "$SKEL/"
+find "$SKEL" -type d -name '__pycache__' -prune -exec rm -rf {} +
 
 # ── 7. permissions ───────────────────────────────────────────────────
 setfacl -bR "$ROOT" 2>/dev/null || true

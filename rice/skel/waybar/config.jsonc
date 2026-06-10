@@ -21,8 +21,8 @@
 
   "custom/ubuntu": {
     "format": "",
-    "tooltip-format": "Ubuntu",
-    "on-click": "ulauncher-toggle"
+    "tooltip-format": "Applications",
+    "on-click": "/usr/bin/python3 __HOME__/.config/niri/app-grid.py"
   },
 
   "custom/power": {

@@ -3,21 +3,26 @@
 ctxmenu.py — reusable context-menu framework for the Cosmoduck niri shell.
 
 A context menu rendered as a full-screen, transparent gtk-layer-shell overlay on
-a target monitor. EVERY click reaches our surface: a click on the menu card
-activates an item, a click anywhere else dismisses the menu. No seat grab is
-used — a grab that failed to release would lock the pointer/keyboard, so this
-design can never get the input stuck. Esc and a hard safety timeout are extra
-exits. This is the shared foundation for every right-click menu in the shell
-(the dock icons today; the desktop, the panel, … tomorrow).
+a target monitor. EVERY click reaches our surface: a click on a card activates an
+item, a click anywhere else dismisses the menu. No seat grab is used — a grab that
+failed to release would lock the pointer/keyboard, so this design can never get the
+input stuck. Esc and a hard safety timeout are extra exits. This is the shared
+foundation for every right-click menu in the shell (dock, tray, desktop, …).
+
+Icons are drawn from the icon theme's *symbolic* variants and recolored by the CSS
+below, so every menu looks monochrome and on-theme regardless of the icon a caller
+passes. Second-level submenus are supported via add_submenu().
 
 Usage:
     from ctxmenu import ContextMenu
     m = ContextMenu(title="Firefox")
     m.add_item("New Window", on_new, icon="window-new")
+    sub = m.add_submenu("Icon Size", icon="zoom-in")
+    sub.add_item("Small", on_small)
     m.add_separator()
     m.add_item("Force Quit", on_kill, icon="process-stop", danger=True)
-    m.popup(anchor_x=1234)   # center the card on this monitor-local x...
-    # m.popup()              # ...or, with no anchor, centered above the dock.
+    m.popup(anchor_x=1234)             # centered above the dock, x-anchored...
+    # m.popup(anchor_x=x, anchor_y=y)  # ...or top-left at the cursor (desktop).
 
 Run the consumer with /usr/bin/python3 so GIR typelibs resolve without env tweaks.
 """
@@ -61,9 +66,17 @@ window { background: transparent; }
   font-size: 13px;
 }
 .ctxmenu-card button label { color: #cad3f5; }
+/* Monochrome, on-theme symbolic icons; recolored to this single accent. */
+.ctxmenu-card button image {
+  -gtk-icon-style: symbolic;
+  color: #a5adce;
+}
 .ctxmenu-card button:hover { background: rgba(138, 173, 244, 0.18); }
+.ctxmenu-card button:hover image { color: #8aadf4; }
 .ctxmenu-card button.danger:hover { background: rgba(237, 135, 150, 0.22); }
 .ctxmenu-card button.danger:hover label { color: #ed8796; }
+.ctxmenu-card button.danger:hover image { color: #ed8796; }
+.ctxmenu-chevron { color: #6e738d; }
 .ctxmenu-card separator {
   background: #494d64;
   min-height: 1px;
@@ -85,6 +98,26 @@ def _install_css():
         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
     )
     _css_installed = True
+
+
+def _symbolic_image(name):
+    """A menu image using the symbolic variant of `name` when the theme has one,
+    so the CSS above can recolor it to a single monochrome accent."""
+    if not name:
+        return None
+    theme = Gtk.IconTheme.get_default()
+    sym = name if name.endswith("-symbolic") else name + "-symbolic"
+    use = sym if theme.has_icon(sym) else name
+    return Gtk.Image.new_from_icon_name(use, Gtk.IconSize.MENU)
+
+
+def _translate(src, dest):
+    """src-widget origin in dest-widget coords, tolerating either PyGObject
+    return shape ((x, y) or (ok, x, y))."""
+    res = src.translate_coordinates(dest, 0, 0)
+    if not res:
+        return (0, 0)
+    return (res[1], res[2]) if len(res) == 3 else (res[0], res[1])
 
 
 def focused_monitor():
@@ -117,7 +150,12 @@ class ContextMenu:
         self.width = width
         self.bottom_margin = bottom_margin
         self.autoclose_ms = autoclose_ms
-        self._rows = []  # list of ("item"|"sep", payload)
+        self._rows = []  # ("item"|"sep"|"submenu", payload)
+        self._win = None
+        self._fixed = None
+        self._cards = []          # open cards, for click-outside hit-testing
+        self._open_sub = None     # the child ContextMenu currently flown out
+        self._flyout = None
 
     def add_item(self, label, callback, icon=None, danger=False):
         self._rows.append(("item", (label, callback, icon, danger)))
@@ -127,42 +165,68 @@ class ContextMenu:
         self._rows.append(("sep", None))
         return self
 
+    def add_submenu(self, label, icon=None):
+        """Add a second-level submenu; returns a ContextMenu to populate."""
+        child = ContextMenu(width=self.width, autoclose_ms=0)
+        self._rows.append(("submenu", (label, icon, child)))
+        return child
+
+    def _estimate_height(self):
+        """Rough card height (px) before allocation, to keep a menu on screen."""
+        n_items = sum(1 for k, _ in self._rows if k in ("item", "submenu"))
+        n_sep = sum(1 for k, _ in self._rows if k == "sep")
+        h = n_items * 34 + n_sep * 9 + 12
+        if self.title:
+            h += 26
+        return h
+
     # ── rendering ──────────────────────────────────────────────────────
-    def _build_card(self):
+    def _build_card(self, rows=None, title=None):
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         card.get_style_context().add_class("ctxmenu-card")
         card.set_margin_top(4)
         card.set_margin_bottom(6)
         card.set_size_request(self.width, -1)
 
-        if self.title:
-            hdr = Gtk.Label(label=self.title, xalign=0.0)
+        if title:
+            hdr = Gtk.Label(label=title, xalign=0.0)
             hdr.get_style_context().add_class("ctxmenu-header")
             card.pack_start(hdr, False, False, 0)
 
-        for kind, payload in self._rows:
+        for kind, payload in (rows if rows is not None else self._rows):
             if kind == "sep":
                 card.pack_start(Gtk.Separator(), False, False, 0)
-                continue
-            label, callback, icon, danger = payload
-            card.pack_start(self._make_button(label, callback, icon, danger),
-                            False, False, 0)
+            elif kind == "submenu":
+                label, icon, child = payload
+                card.pack_start(self._make_submenu_button(label, icon, child),
+                                False, False, 0)
+            else:
+                label, callback, icon, danger = payload
+                card.pack_start(self._make_button(label, callback, icon, danger),
+                                False, False, 0)
         return card
+
+    def _row(self, icon, label, danger=False, chevron=False):
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        img = _symbolic_image(icon)
+        if img is not None:
+            row.pack_start(img, False, False, 0)
+        lbl = Gtk.Label(label=label, xalign=0.0)
+        lbl.set_ellipsize(3)  # PANGO_ELLIPSIZE_END
+        lbl.set_max_width_chars(28)
+        row.pack_start(lbl, True, True, 0)
+        if chevron:
+            ch = Gtk.Label(label="›")  # ›
+            ch.get_style_context().add_class("ctxmenu-chevron")
+            row.pack_start(ch, False, False, 0)
+        return row
 
     def _make_button(self, label, callback, icon, danger):
         btn = Gtk.Button()
         btn.set_relief(Gtk.ReliefStyle.NONE)
         if danger:
             btn.get_style_context().add_class("danger")
-        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-        if icon:
-            row.pack_start(Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.MENU),
-                           False, False, 0)
-        lbl = Gtk.Label(label=label, xalign=0.0)
-        lbl.set_ellipsize(3)  # PANGO_ELLIPSIZE_END
-        lbl.set_max_width_chars(28)
-        row.pack_start(lbl, True, True, 0)
-        btn.add(row)
+        btn.add(self._row(icon, label, danger))
 
         def on_clicked(_w):
             self._close()
@@ -173,6 +237,41 @@ class ContextMenu:
         btn.connect("clicked", on_clicked)
         return btn
 
+    def _make_submenu_button(self, label, icon, child):
+        btn = Gtk.Button()
+        btn.set_relief(Gtk.ReliefStyle.NONE)
+        btn.add(self._row(icon, label, chevron=True))
+        btn.connect("clicked", lambda _w: self._toggle_submenu(btn, child))
+        return btn
+
+    def _toggle_submenu(self, parent_btn, child):
+        if self._open_sub is child:
+            self._close_flyout()
+            return
+        self._close_flyout()
+        flyout = self._build_card(rows=child._rows, title=child.title)
+        # Position to the right of the parent row, or to the left if no room.
+        px, py = _translate(parent_btn, self._fixed)
+        cw = self.width
+        ch = child._estimate_height()
+        left = px + cw - 8
+        if left + cw > self._mw - 4:
+            left = px - cw + 8
+        left = max(4, min(left, self._mw - cw - 4))
+        top = max(4, min(py - 4, self._mh - ch - 4))
+        self._fixed.put(flyout, left, top)
+        flyout.show_all()
+        self._flyout = flyout
+        self._open_sub = child
+        self._cards = [self._card, flyout]
+
+    def _close_flyout(self):
+        if self._flyout is not None:
+            self._flyout.destroy()
+            self._flyout = None
+        self._open_sub = None
+        self._cards = [self._card] if self._card is not None else []
+
     def _close(self, *_):
         if self._win is not None:
             self._win.destroy()
@@ -180,7 +279,7 @@ class ContextMenu:
         Gtk.main_quit()
 
     # ── show ───────────────────────────────────────────────────────────
-    def popup(self, anchor_x=None, monitor=None):
+    def popup(self, anchor_x=None, monitor=None, anchor_y=None):
         _install_css()
         self._win = win = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
         win.set_decorated(False)
@@ -189,11 +288,21 @@ class ContextMenu:
         visual = screen.get_rgba_visual()
         if visual is not None:
             win.set_visual(visual)
-        win.set_title("dock-menu")  # app-id for any compositor rule
+        win.set_title("ctxmenu")  # app-id for any compositor rule
 
-        card = self._build_card()
+        self._card = card = self._build_card()
 
-        mon, mx, mw = (monitor, 0, 1920) if monitor else focused_monitor()
+        if monitor is not None:
+            mon = monitor
+            geo = mon.get_geometry()
+            mx, mw, mh = geo.x, geo.width, geo.height
+        else:
+            mon, mx, mw = focused_monitor()
+            try:
+                mh = mon.get_geometry().height if mon is not None else 1080
+            except Exception:
+                mh = 1080
+        self._mw, self._mh = int(mw), int(mh)
 
         if HAVE_LAYER_SHELL:
             GtkLayerShell.init_for_window(win)
@@ -207,36 +316,44 @@ class ContextMenu:
                 GtkLayerShell.set_anchor(win, edge, True)
             GtkLayerShell.set_exclusive_zone(win, -1)
 
-        # Position the card within the full-screen overlay.
-        card.set_valign(Gtk.Align.END)
-        card.set_margin_bottom(self.bottom_margin)
-        if anchor_x is not None:
+        # Compute the main card's absolute top-left, then lay it in a Fixed so a
+        # submenu flyout can be positioned beside it within the same overlay.
+        est_h = self._estimate_height()
+        if anchor_y is not None:
+            left = int(anchor_x if anchor_x is not None else 0)
+            top = int(anchor_y)
+        elif anchor_x is not None:
             left = int(anchor_x - self.width / 2)
-            left = max(4, min(left, int(mw) - self.width - 4))
-            card.set_halign(Gtk.Align.START)
-            card.set_margin_start(left)
+            top = self._mh - self.bottom_margin - est_h
         else:
-            card.set_halign(Gtk.Align.CENTER)
+            left = int((self._mw - self.width) / 2)
+            top = self._mh - self.bottom_margin - est_h
+        left = max(4, min(left, self._mw - self.width - 4))
+        top = max(4, min(top, self._mh - est_h - 4))
 
-        win.add(card)
-        self._card = card
+        self._fixed = Gtk.Fixed()
+        self._fixed.put(card, left, top)
+        win.add(self._fixed)
+        self._cards = [card]
 
-        # Dismiss on a click outside the card.
+        # Dismiss on a click outside every open card.
         win.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
 
         def on_press(_w, ev):
-            a = card.get_allocation()
-            inside = (a.x <= ev.x <= a.x + a.width and
-                      a.y <= ev.y <= a.y + a.height)
-            if not inside:
-                self._close()
-                return True
-            return False
+            for c in self._cards:
+                a = c.get_allocation()
+                if a.x <= ev.x <= a.x + a.width and a.y <= ev.y <= a.y + a.height:
+                    return False
+            self._close()
+            return True
         win.connect("button-press-event", on_press)
 
         def on_key(_w, ev):
             if ev.keyval == Gdk.KEY_Escape:
-                self._close()
+                if self._open_sub is not None:
+                    self._close_flyout()
+                else:
+                    self._close()
                 return True
             return False
         win.connect("key-press-event", on_key)
