@@ -100,6 +100,10 @@ You can rebuild the `.deb` yourself afterwards with
 
 ![desktop-icons](docs/screenshots/14-desktop-icons.png)
 
+**App grid launcher** (`Mod+A` or the Ubuntu button) — Launchpad-style, non-fullscreen, search-as-you-type, with the same focus-ring bezel niri draws around windows:
+
+![app-grid](docs/screenshots/15-app-grid.png)
+
 **Keyboard cheatsheet** (F1) — auto-built from your keybinds, shown at first login:
 
 ![cheatsheet](docs/screenshots/05-cheatsheet.png)

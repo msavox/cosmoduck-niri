@@ -21,6 +21,7 @@ pixelated in post.
 | `12-plymouth.png` | Plymouth boot splash: duck + loading bar over the scrolling kernel/systemd log. |
 | `13-dock-manager.png` | The dock manager window: pin/unpin apps + the dock-height slider. |
 | `14-desktop-icons.png` | Desktop icons on the bottom layer (top-right) with the right-click menu + icon-size submenu open. |
+| `15-app-grid.png` | Launchpad-style app grid launcher (Mod+A / Ubuntu button) with the focus-ring bezel. |
 
 `10-swaylock.png` locks every output at once, so it's awkward to self-capture —
 easiest is `sleep 4; grim -o <output> 10-swaylock.png &` then lock. `12-plymouth.png`
