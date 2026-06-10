@@ -16,3 +16,7 @@ __pycache__/
 
 # the prebuilt .deb is distributed via GitHub Releases, not committed
 dist/*.deb
+
+# stray VirtualBox dxvk cache
+VBoxHeadless.dxvk-cache
+*.dxvk-cache
