@@ -45,7 +45,7 @@ screenshots.
 Grab the `.deb` from the [**latest release**](https://github.com/msavox/cosmoduck-niri/releases/latest), then:
 
 ```bash
-sudo apt install ./cosmoduck-niri_1.2.0_amd64.deb   # pulls all runtime deps
+sudo apt install ./cosmoduck-niri_1.3.0_amd64.deb   # pulls all runtime deps
 cosmoduck-niri-setup                                 # run as your user, NOT sudo
 ```
 
@@ -70,7 +70,9 @@ You can rebuild the `.deb` yourself afterwards with
 | | |
 |---|---|
 | **Compositor** | niri `v26.04` + jammy patches |
-| **Bar & dock** | waybar top bar with a macOS-style close-window button, plus a macOS-style pinned dock with running indicators that split into one segment per open window, per-app notification badges, a right-click context menu (New Window / focus each instance / Close / Force Quit), and adjustable height (slider in the dock manager) |
+| **Bar & dock** | waybar top bar with a macOS-style close-window button, plus a macOS-style pinned dock with running indicators that split into one segment per open window, per-app notification badges, a right-click context menu (New Window / focus each instance / Close / Force Quit), and adjustable height (slider in the dock manager); every shell context menu (dock, tray, desktop) shares one framework with monochrome symbolic icons and flyout submenus |
+| **Desktop** | real desktop icons on niri (layer-shell surface between wallpaper and tiles): `~/Desktop` grid aligned top-right macOS-style, double-click to open, click / Ctrl-click / rubber-band marquee selection, full drag & drop (reposition, drag files onto other apps **and onto dock icons** — drop on the bin trashes in batch, drop on an app opens the files with it — plus drop external files in), right-click menu — New › submenu (text/markdown/shell/python/Word/Excel/PowerPoint/GanttProject + your `~/Templates`), Cut/Copy/Paste, Rename, Trash, Properties, Open with…, sort, free/grid arrangement with nearest-cell Snap to Grid, icon-size submenu, hide icons — and an animated `Mod+Shift+D` show-desktop toggle |
+| **App grid** | Launchpad-style application grid on the Ubuntu button in the top bar (non-fullscreen, search-as-you-type, arrow navigation), dressed like ulauncher's macos theme; ulauncher itself stays on `Ctrl+Space` / `Mod+D` |
 | **Notifications** | SwayNotificationCenter (swaync); clicking a notification focuses the source app's window |
 | **Lock** | swaylock-effects over a blurred wallpaper, with the Cosmoduck duck composited in the lock ring |
 | **Boot splash** | Plymouth "cosmoduck" theme — duck + loading bar over a scrolling kernel/systemd log (set up automatically; reverts on uninstall) |
@@ -93,6 +95,10 @@ You can rebuild the `.deb` yourself afterwards with
 **Dock manager** — pin/unpin apps and tune the dock height with a slider:
 
 ![dock-manager](docs/screenshots/13-dock-manager.png)
+
+**Desktop icons** — `~/Desktop` rendered on niri's bottom layer (top-right macOS-style), with the right-click context menu and its icon-size submenu open:
+
+![desktop-icons](docs/screenshots/14-desktop-icons.png)
 
 **Keyboard cheatsheet** (F1) — auto-built from your keybinds, shown at first login:
 

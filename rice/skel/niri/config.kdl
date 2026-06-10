@@ -116,6 +116,7 @@ spawn-at-startup "ulauncher" "--hide-window"
 // spawn-sh-at-startup "swayidle -w timeout 600 '$HOME/.config/niri/swaylock-blur.sh' before-sleep '$HOME/.config/niri/swaylock-blur.sh'"
 spawn-sh-at-startup "sleep 3 && __HOME__/.config/niri/conky-spawn.sh"
 spawn-sh-at-startup "sleep 5 && __HOME__/.config/niri/conky-bg-launch.sh"
+spawn-sh-at-startup "sleep 5 && __HOME__/.config/niri/desktop-launch.sh"
 spawn-sh-at-startup "__HOME__/.config/niri/cheatsheet-startup.sh"
 
 // ════════ Cheatsheet ═══════════════════════════════════════════════
@@ -343,6 +344,7 @@ binds {
     Mod+F           hotkey-overlay-title="Maximize column"                     { maximize-column; }
     Mod+Shift+F     hotkey-overlay-title="Fullscreen window"                   { fullscreen-window; }
     Mod+Shift+B     hotkey-overlay-title="Hide/show waybar + dock (presentation mode)" { spawn-sh "$HOME/.config/waybar/presentation-toggle.sh"; }
+    Mod+Shift+D     hotkey-overlay-title="Show desktop (toggle)"               { spawn-sh "$HOME/.config/niri/show-desktop.sh"; }
     Mod+M           hotkey-overlay-title="Maximize window to screen edges"     { maximize-window-to-edges; }
     Mod+C           hotkey-overlay-title="Center column"                       { center-column; }
     Mod+Ctrl+F      hotkey-overlay-title="Expand column to available width"    { expand-column-to-available-width; }
