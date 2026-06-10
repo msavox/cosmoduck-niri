@@ -45,7 +45,7 @@ screenshots.
 Grab the `.deb` from the [**latest release**](https://github.com/msavox/cosmoduck-niri/releases/latest), then:
 
 ```bash
-sudo apt install ./cosmoduck-niri_1.3.0_amd64.deb   # pulls all runtime deps
+sudo apt install ./cosmoduck-niri_1.3.1_amd64.deb   # pulls all runtime deps
 cosmoduck-niri-setup                                 # run as your user, NOT sudo
 ```
 
