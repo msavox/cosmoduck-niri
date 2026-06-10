@@ -28,6 +28,8 @@ import signal
 import subprocess
 import sys
 
+import cairo
+
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, Gio, GLib, Pango  # noqa: E402
@@ -697,6 +699,7 @@ class Desktop:
         if event.window != widget.get_window():
             return False
         if event.button == 1:
+            self._clear_marquee()  # tear down any leftover rubber-band first
             ctrl = bool(event.state & Gdk.ModifierType.CONTROL_MASK)
             base = set(self.selected) if ctrl else set()
             if not ctrl:
@@ -727,6 +730,13 @@ class Desktop:
             box.get_style_context().add_class("marquee")
             self.fixed.put(box, x0, y0)
             box.show()
+            # The rubber-band sits under the cursor, so without this the
+            # button-release would land on IT (no handler) and the box would
+            # never be torn down — leaving a dead rectangle that eats clicks.
+            # An empty input region makes it click-through; release reaches us.
+            gw = box.get_window()
+            if gw is not None:
+                gw.input_shape_combine_region(cairo.Region(), 0, 0)
             mq["box"] = box
         self.fixed.move(mq["box"], int(x0), int(y0))
         mq["box"].set_size_request(max(1, int(w)), max(1, int(h)))
@@ -744,13 +754,17 @@ class Desktop:
         return True
 
     def on_marquee_release(self, widget, event):
-        mq = self._marquee
-        if mq is None:
+        if self._marquee is None:
             return False
-        if mq["box"] is not None:
-            mq["box"].destroy()
-        self._marquee = None
+        self._clear_marquee()
         return True
+
+    def _clear_marquee(self):
+        if self._marquee is not None:
+            box = self._marquee.get("box")
+            if box is not None:
+                box.destroy()
+            self._marquee = None
 
     # ── context menu spawning ──────────────────────────────────────────
     def _popup_menu_for_selection(self, ic, event, widget):
