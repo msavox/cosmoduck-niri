@@ -108,6 +108,23 @@ def open_with(path, appinfo):
         _spawn(["xdg-open", path])
 
 
+def open_with_chooser(path):
+    """Full 'Open With…' picker (every installed app, GNOME-style)."""
+    ct = _content_type(path) or "application/octet-stream"
+    dlg = Gtk.AppChooserDialog.new_for_content_type(
+        None, Gtk.DialogFlags.MODAL, ct)
+    dlg.set_heading(f"Open “{os.path.basename(path)}” with…")
+    widget = dlg.get_widget()
+    widget.set_show_recommended(True)
+    widget.set_show_fallback(True)
+    widget.set_show_other(True)
+    resp = dlg.run()
+    ai = dlg.get_app_info()
+    dlg.destroy()
+    if resp == Gtk.ResponseType.OK and ai is not None:
+        open_with(path, ai)
+
+
 def trash_paths(paths):
     for p in paths:
         try:
@@ -551,6 +568,8 @@ def build_file_menu(kind, paths):
                 shown += 1
                 if shown >= 3:
                     break
+        m.add_item("Open With…", lambda: open_with_chooser(single),
+                   icon="view-more")
 
     m.add_separator()
     m.add_item("Cut", lambda: save_clip("cut", paths), icon="edit-cut")

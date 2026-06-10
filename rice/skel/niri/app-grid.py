@@ -44,9 +44,13 @@ _CSS = b"""
 window { background: transparent; }
 .appgrid-card {
   background: rgba(36, 36, 38, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* The bezel: same ring niri draws around the focused window (focus-ring
+     width 3, #8aadf4). A layer-shell surface never gets niri's own ring, so
+     the card paints it itself; that is what makes it match ulauncher. */
+  border: 3px solid #8aadf4;
   border-radius: 32px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 18px 50px 8px rgba(0, 0, 0, 0.55);
+  padding: 8px;
 }
 .appgrid-search {
   color: #f5f5f7;
@@ -58,6 +62,13 @@ window { background: transparent; }
   background: rgba(255, 255, 255, 0.07);
   border: none;
   border-radius: 14px;
+  outline: none;
+  box-shadow: none;
+}
+.appgrid-search:focus {
+  border: none;
+  outline: none;
+  box-shadow: none;
 }
 .appgrid-card scrolledwindow { border: none; background: transparent; }
 flowbox, flowboxchild { background: transparent; }
