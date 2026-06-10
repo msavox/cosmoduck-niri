@@ -249,6 +249,7 @@ binds {
     Mod+Return  hotkey-overlay-title="Terminal (ghostty)"            { spawn "ghostty"; }
     Mod+T       hotkey-overlay-title="Terminal (ghostty)"            { spawn "ghostty"; }
     Mod+D       hotkey-overlay-title="Ulauncher"                     { spawn "ulauncher-toggle"; }
+    Mod+A       hotkey-overlay-title="App grid launcher"             { spawn-sh "/usr/bin/python3 $HOME/.config/niri/app-grid.py"; }
     Ctrl+Space  hotkey-overlay-title="Ulauncher"                     { spawn "ulauncher-toggle"; }
     Mod+B       hotkey-overlay-title="Browser (firefox)"             { spawn "firefox"; }
     Mod+E       hotkey-overlay-title="Open Home folder"              { spawn "xdg-open" "__HOME__"; }
