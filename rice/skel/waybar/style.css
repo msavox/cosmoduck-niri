@@ -30,8 +30,10 @@ window#waybar {
 #custom-power,
 #clock,
 #tray,
+#custom-clipboard,
 #pulseaudio,
 #bluetooth,
+#custom-headset,
 #network,
 #cpu,
 #memory,
@@ -42,10 +44,14 @@ window#waybar {
   background: transparent;
 }
 
+#custom-headset.warning  { color: #eed49f; }
+#custom-headset.critical { color: #ed8796; }
+
 .modules-right #custom-layout,
 .modules-right #tray,
 .modules-right #pulseaudio,
 .modules-right #bluetooth,
+.modules-right #custom-headset,
 .modules-right #network,
 .modules-right #cpu,
 .modules-right #memory,
@@ -56,6 +62,7 @@ window#waybar {
 }
 
 #pulseaudio:hover, #bluetooth:hover, #network:hover,
+#custom-clipboard:hover,
 #cpu:hover, #memory:hover, #battery:hover,
 #custom-layout:hover, #custom-power:hover, #custom-app-menu:hover,
 #clock:hover {

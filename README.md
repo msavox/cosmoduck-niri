@@ -70,8 +70,10 @@ You can rebuild the `.deb` yourself afterwards with
 | | |
 |---|---|
 | **Compositor** | niri `v26.04` + jammy patches |
-| **Bar & dock** | waybar top bar with a macOS-style close-window button, plus a macOS-style pinned dock with running indicators that split into one segment per open window, per-app notification badges, a right-click context menu (New Window / focus each instance / Close / Force Quit), and adjustable height (slider in the dock manager); unpinned running apps are **auto-pinned** into pre-allocated slots by a small daemon — icon, running indicator and the full context menu, with no dock restarts (windows never re-layout); every shell context menu (dock, tray, desktop) shares one framework with monochrome symbolic icons and flyout submenus |
-| **OSD** | macOS-style volume / brightness / mic HUD: translucent card bottom-center on the overlay layer, click-through, visible on the lock screen too, with the freedesktop feedback tick on volume keys — played only when no other audio stream is live |
+| **Bar & dock** | waybar top bar with a macOS-style close-window button, plus a macOS-style pinned dock with running indicators that split into one segment per open window, per-app notification badges, a right-click context menu (New Window / focus each instance / Keep in Dock / Remove from Dock / Close / Force Quit), and adjustable height (slider in the dock manager); unpinned running apps are **auto-pinned** into pre-allocated slots by a small daemon — icon, running indicator and the full context menu, with no dock restarts (windows never re-layout); every shell context menu (dock, tray, desktop) shares one framework with monochrome symbolic icons and flyout submenus |
+| **OSD** | macOS-style volume / brightness / mic HUD: translucent card bottom-center on the overlay layer, click-through, visible on the lock screen too, with the freedesktop feedback tick on volume keys — played only when no other audio stream is live; media-key cards too (play/pause/stop/next/prev/seek, AVRCP keys from BT headphones included) with a now-playing title/artist readout, and auto-pause when the headphones disconnect |
+| **Audio** | click the volume icon for a macOS-style output/input/profile switcher (flyout per device, `pactl` defaults); battery of connected bluetooth devices in the bar (`org.bluez.Battery1`, instant updates via D-Bus signals) |
+| **Clipboard** | clipboard history (text + images) collected by `wl-paste --watch cliphist store`, browsed from a menu on `Mod+Ctrl+V` or the bar icon |
 | **Desktop** | real desktop icons on niri (layer-shell surface between wallpaper and tiles): `~/Desktop` grid aligned top-right macOS-style, double-click to open, click / Ctrl-click / rubber-band marquee selection, keyboard (Delete → trash, Shift+Delete → permanent, Ctrl+A, Enter, Esc), full drag & drop (reposition, drag files onto other apps **and onto dock icons** — drop on the bin trashes in batch, drop on an app opens the files with it — plus drop external files in), right-click menu — New › submenu (text/markdown/shell/python/Word/Excel/PowerPoint/GanttProject + your `~/Templates`), Cut/Copy/Paste, Rename, Trash, Properties, Open with…, sort, free/grid arrangement with nearest-cell Snap to Grid, icon-size submenu, hide icons — and an animated `Mod+Shift+D` show-desktop toggle |
 | **App grid** | Launchpad-style application grid on the Ubuntu button in the top bar (non-fullscreen, search-as-you-type, arrow navigation), dressed like ulauncher's macos theme; ulauncher itself stays on `Ctrl+Space` / `Mod+D` |
 | **Notifications** | SwayNotificationCenter (swaync); clicking a notification focuses the source app's window |
@@ -88,7 +90,7 @@ You can rebuild the `.deb` yourself afterwards with
 
 ![tiling](docs/screenshots/02-tiling.png)
 
-**macOS-style dock** (pinned apps + running indicators + trash) and the **top bar** (workspaces, the blue close-window button, window title, tray, custom modules — ☕ lid keep-awake, 👁 conky toggle, volume):
+**macOS-style dock** (pinned apps + running indicators + trash) and the **top bar** (workspaces, the blue close-window button, window title, tray, custom modules — ☕ lid keep-awake, 👁 conky toggle, clipboard history, volume, bluetooth battery):
 
 ![dock](docs/screenshots/03-dock.png)
 ![bar](docs/screenshots/04-bar.png)
@@ -108,6 +110,14 @@ You can rebuild the `.deb` yourself afterwards with
 **Volume / brightness OSD** — macOS-style HUD on the volume, brightness and mic-mute keys, floating above the dock (click-through, auto-hides):
 
 ![osd](docs/screenshots/16-osd.png)
+
+**Audio switcher** — click the volume icon to change output/input device or card profile (the bar also shows the bluetooth battery of headphones and mouse):
+
+![audio-menu](docs/screenshots/17-audio-menu.png)
+
+**Clipboard history** (`Mod+Ctrl+V` or the bar icon) — collected by cliphist, text and images:
+
+![clipboard](docs/screenshots/18-clipboard.png)
 
 **Keyboard cheatsheet** (F1) — auto-built from your keybinds, shown at first login:
 

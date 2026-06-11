@@ -20,6 +20,7 @@ STEPS=(
   07-swaylock.sh
   07b-swaylock-effects.sh
   08-niri.sh
+  09-cliphist.sh
 )
 
 for s in "${STEPS[@]}"; do

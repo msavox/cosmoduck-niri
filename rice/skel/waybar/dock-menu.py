@@ -7,10 +7,14 @@ consumer of the shared ctxmenu framework (ctxmenu.py): it gathers the app's
 state from niri and hands a list of items to ContextMenu, which renders the
 self-dismissing overlay. Entries:
 
-  • New Window  — always; launches a fresh instance (dock-click.sh <id> new)
-  • Focus: …    — one row per open instance, when more than one is open
-  • Close       — gracefully closes every instance (niri close-window --id)
-  • Force Quit  — SIGKILLs every instance's pid (for a hung app)
+  • New Window       — always; launches a fresh instance (dock-click.sh <id> new)
+  • Focus: …         — one row per open instance, when more than one is open
+  • Keep in Dock     — auto-pinned (running, unpinned) apps: copy the entry
+                       into dock-apps.json and regenerate the dock
+  • Remove from Dock — pinned apps: drop the entry from dock-apps.json (a
+                       running app re-enters via an auto-slot)
+  • Close            — gracefully closes every instance (niri close-window --id)
+  • Force Quit       — SIGKILLs every instance's pid (for a hung app)
 
 A second right-click on any icon replaces the menu (one menu at a time).
 
@@ -98,6 +102,53 @@ def matching_windows(match):
            for w in wins if pat.search(w.get("app_id") or "")]
     res.sort(key=lambda w: (w["id"] is None, w["id"]))
     return res
+
+
+def _read_apps():
+    try:
+        with open(APPS) as f:
+            v = json.load(f)
+        return v if isinstance(v, list) else []
+    except (OSError, ValueError):
+        return []
+
+
+def _write_apps_and_regen(apps):
+    with open(APPS, "w") as f:
+        json.dump(apps, f, indent=2)
+        f.write("\n")
+    # dock-gen.sh regenerates dock.jsonc + pinned CSS and restarts the dock
+    subprocess.Popen(["bash", os.path.join(CFG, "dock-gen.sh")],
+                     start_new_session=True,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def pin_app(entry):
+    """Keep in Dock: promote an auto-slot entry to a permanent pin, inserted
+    before the post_taskbar tail (settings/trash) so it joins the other
+    pinned icons. The auto-slot frees itself at the next autopin pass."""
+    apps = _read_apps()
+    ids = {e.get("id") for e in apps}
+    base = re.sub(r"[^a-z0-9]+", "-",
+                  (entry.get("name") or entry.get("id") or "app").lower(),
+                  ).strip("-") or "app"
+    new_id, n = base, 2
+    while new_id in ids:
+        new_id, n = f"{base}-{n}", n + 1
+    e = {k: v for k, v in entry.items() if k not in ("auto", "icon_class")}
+    e["id"] = new_id
+    if any(a.get("post_taskbar") for a in apps):
+        tail = next(i for i, a in enumerate(apps) if a.get("post_taskbar"))
+    else:
+        tail = max(len(apps) - 1, 0)  # legacy: last entry acts as post
+    apps.insert(tail, e)
+    _write_apps_and_regen(apps)
+
+
+def unpin_app(app_id):
+    """Remove from Dock: a running app re-enters via an auto-slot."""
+    _write_apps_and_regen(
+        [e for e in _read_apps() if e.get("id") != app_id])
 
 
 def launch_new(app_id):
@@ -188,13 +239,24 @@ def main():
     m = ContextMenu(title=name)
     m.add_item("New Window", lambda: launch_new(app_id), icon="window-new")
 
+    if len(wins) > 1:
+        m.add_separator()
+        for w in wins:
+            m.add_item(w["title"],
+                       (lambda wid=w["id"]: focus_window(wid)),
+                       icon="go-next-symbolic")
+
+    pinned = any(e.get("id") == app_id for e in _read_apps())
+    if not (pinned and entry.get("post_taskbar")):  # settings/trash stay put
+        m.add_separator()
+        if pinned:
+            m.add_item("Remove from Dock", lambda: unpin_app(app_id),
+                       icon="list-remove")
+        else:
+            m.add_item("Keep in Dock", lambda: pin_app(entry),
+                       icon="list-add")
+
     if wins:
-        if len(wins) > 1:
-            m.add_separator()
-            for w in wins:
-                m.add_item(w["title"],
-                           (lambda wid=w["id"]: focus_window(wid)),
-                           icon="go-next-symbolic")
         m.add_separator()
         n = len(wins)
         m.add_item("Close" if n == 1 else f"Close all ({n})",
