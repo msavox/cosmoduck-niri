@@ -26,6 +26,7 @@ import sys
 
 CFG = os.path.expanduser("~/.config/waybar")
 APPS = os.path.join(CFG, "dock-apps.json")
+AUTO = os.path.join(CFG, "dock-apps-auto.json")
 
 # Dock layout constants (mirror dock-gen.sh / dock.css for the H=52 baseline),
 # used only to estimate where a clicked icon sits on screen.
@@ -59,11 +60,25 @@ def _toggle_off_if_running():
             pass
 
 
-def load_entry(app_id):
+def load_all():
+    """Pinned entries + temporary auto-pins (dock-autopin.py), in the same
+    order dock-gen.sh merges them — icon_center_x relies on that order."""
     with open(APPS) as f:
-        for e in json.load(f):
-            if e.get("id") == app_id:
-                return e
+        apps = json.load(f)
+    try:
+        with open(AUTO) as f:
+            extra = json.load(f)
+        if isinstance(extra, list):
+            apps += extra
+    except (OSError, ValueError):
+        pass
+    return apps
+
+
+def load_entry(app_id):
+    for e in load_all():
+        if e.get("id") == app_id:
+            return e
     return None
 
 
@@ -119,11 +134,12 @@ def icon_center_x(app_id):
     """Best-effort monitor-local X (px) of the clicked icon's center.
 
     The dock is centered in modules-center as
-        [pre-taskbar icons] [wlr/taskbar] [post-taskbar icons]
-    The taskbar width is dynamic (only non-pinned open windows), so we recompute
-    it from current niri state. Approximate — waybar's exact box model isn't
-    observable — but close for pre-taskbar icons. Returns None on any failure
-    (ContextMenu then falls back to centered placement)."""
+        [pinned icons] [occupied auto-slots] [post icons]
+    Vacant auto-slots are hidden (no width) and absent from the merged list,
+    so every visible module IS a merged entry — load_all()'s order matches
+    the on-screen order. Approximate — waybar's exact box model isn't
+    observable — but close. Returns None on any failure (ContextMenu then
+    falls back to centered placement)."""
     try:
         out = json.loads(subprocess.check_output(
             ["niri", "msg", "--json", "focused-output"], text=True))
@@ -136,42 +152,25 @@ def icon_center_x(app_id):
     except Exception:
         H = 52
     H = max(36, min(110, H))
-    fp = (H * 36 // 52) + MOD_MARGIN_X   # pinned-module footprint
-    tfp = (H * 32 // 52) + MOD_MARGIN_X  # taskbar-button footprint (approx)
+    fp = (H * 36 // 52) + MOD_MARGIN_X   # module footprint
 
     try:
-        apps = json.load(open(APPS))
+        apps = load_all()
     except Exception:
         return None
     pre = [e["id"] for e in apps if not e.get("post_taskbar")]
     post = [e["id"] for e in apps if e.get("post_taskbar")]
-    pinned = {a for e in apps for a in (e.get("app_ids") or [])}
 
-    ntask = 0
-    try:
-        wins = json.loads(subprocess.check_output(
-            ["niri", "msg", "--json", "windows"], text=True))
-        ntask = sum(1 for w in wins if (w.get("app_id") or "") not in pinned)
-    except Exception:
-        ntask = 0
-
-    seq = [fp] * len(pre) + [tfp] * ntask + [fp] * len(post)
+    seq = pre + post
     if not seq:
         return None
-    total = sum(seq) + DOCK_SPACING * (len(seq) - 1) + 2 * DOCK_MARGIN
+    total = fp * len(seq) + DOCK_SPACING * (len(seq) - 1) + 2 * DOCK_MARGIN
     left = (S - total) / 2 + DOCK_MARGIN
 
-    if app_id in pre:
-        idx = pre.index(app_id)
-    elif app_id in post:
-        idx = len(pre) + ntask + post.index(app_id)
-    else:
+    if app_id not in seq:
         return None
-
-    x = left
-    for i in range(idx):
-        x += seq[i] + DOCK_SPACING
-    return x + seq[idx] / 2
+    idx = seq.index(app_id)
+    return left + idx * (fp + DOCK_SPACING) + fp / 2
 
 
 def main():

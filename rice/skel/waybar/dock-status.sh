@@ -4,10 +4,23 @@
 set -euo pipefail
 id="${1:?missing app id}"
 apps="$HOME/.config/waybar/dock-apps.json"
+# Temporary auto-pins (dock-autopin.py) live in a second file; /dev/null
+# slurps to nothing, so a missing file degrades to the pinned list alone.
+auto="$HOME/.config/waybar/dock-apps-auto.json"
+[[ -f "$auto" ]] || auto=/dev/null
 
-entry=$(jq -c --arg id "$id" '.[] | select(.id==$id)' "$apps")
+entry=$(jq -sc --arg id "$id" 'add | map(select(.id==$id)) | first // empty' "$apps" "$auto")
+
+# Vacant auto-pin slot: empty text makes waybar hide the module entirely
+# (the same quirk that forces the " " below, used as a feature here).
+if [[ -z "$entry" && "$id" == auto-slot* ]]; then
+  printf '{"text":""}\n'
+  exit 0
+fi
+
 name=$(jq -r .name  <<<"$entry")
 match=$(jq -r .match <<<"$entry")
+icon_class=$(jq -r '.icon_class // empty' <<<"$entry")
 # Non-empty space: needed so waybar does not hide the module.
 # The real icon comes from background-image (GTK theme) in dock-pinned.css.
 icon=" "
@@ -17,6 +30,7 @@ icon=" "
 # MAXSEG caps the visual segment count: 5+ instances still show 4 segments.
 MAXSEG=4
 classes=()
+[[ -n "$icon_class" ]] && classes+=("$icon_class")
 if [[ -n "$match" ]]; then
   n_inst=$(niri msg --json windows 2>/dev/null \
     | jq -r --arg m "$match" '[.[] | select(.app_id != null and (.app_id | test($m)))] | length')

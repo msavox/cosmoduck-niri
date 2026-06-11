@@ -7,8 +7,12 @@ set -euo pipefail
 id="${1:?missing app id}"
 mode="${2:-}"
 apps="$HOME/.config/waybar/dock-apps.json"
+# Temporary auto-pins (dock-autopin.py) live in a second file; /dev/null
+# slurps to nothing, so a missing file degrades to the pinned list alone.
+auto="$HOME/.config/waybar/dock-apps-auto.json"
+[[ -f "$auto" ]] || auto=/dev/null
 
-entry=$(jq -c --arg id "$id" '.[] | select(.id==$id)' "$apps")
+entry=$(jq -sc --arg id "$id" 'add | map(select(.id==$id)) | first // empty' "$apps" "$auto")
 cmd=$(jq -r .command <<<"$entry")
 match=$(jq -r .match <<<"$entry")
 

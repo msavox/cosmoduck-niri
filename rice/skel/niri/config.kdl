@@ -109,6 +109,11 @@ spawn-sh-at-startup "sleep 1 && __HOME__/.config/waybar/tray-toggle.sh start-if-
 spawn-at-startup "/usr/libexec/gsd-rfkill"
 spawn-at-startup "swaync" "-c" "__HOME__/.config/swaync/config.json" "-s" "__HOME__/.config/swaync/style.css"
 spawn-at-startup "/usr/bin/python3" "__HOME__/.config/waybar/notif-count.py" "daemon"
+// auto-pin temporaneo: le app aperte non pinnate diventano moduli del dock
+// (così hanno il menu contestuale); spinnate quando chiudono.
+spawn-sh-at-startup "exec /usr/bin/python3 __HOME__/.config/waybar/dock-autopin.py 2>>__HOME__/.config/waybar/dock-autopin.err"
+// OSD volume/luminosità stile macOS (card bottom-center, vedi osd.py)
+spawn-sh-at-startup "exec /usr/bin/python3 __HOME__/.config/niri/osd.py 2>>/tmp/cosmoduck-osd.err"
 spawn-sh-at-startup "__HOME__/.config/niri/gnome-wallpaper-sync.sh"
 spawn-at-startup "/usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1"
 spawn-at-startup "ulauncher" "--hide-window"
@@ -365,16 +370,16 @@ binds {
     Alt+Print   hotkey-overlay-title="Screenshot window"              { screenshot-window; }
 
     // ─── Volume / Media / Brightness ──────────────────────────────
-    XF86AudioRaiseVolume  allow-when-locked=true { spawn-sh "/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ +5%"; }
-    XF86AudioLowerVolume  allow-when-locked=true { spawn-sh "/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ -5%"; }
-    XF86AudioMute         allow-when-locked=true { spawn-sh "/usr/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle"; }
-    XF86AudioMicMute      allow-when-locked=true { spawn-sh "/usr/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle"; }
+    XF86AudioRaiseVolume  allow-when-locked=true { spawn-sh "/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ +5%; __HOME__/.config/niri/osd-notify.sh volume"; }
+    XF86AudioLowerVolume  allow-when-locked=true { spawn-sh "/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ -5%; __HOME__/.config/niri/osd-notify.sh volume"; }
+    XF86AudioMute         allow-when-locked=true { spawn-sh "/usr/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle; __HOME__/.config/niri/osd-notify.sh mute"; }
+    XF86AudioMicMute      allow-when-locked=true { spawn-sh "/usr/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle; __HOME__/.config/niri/osd-notify.sh mic"; }
     XF86AudioPlay         allow-when-locked=true { spawn-sh "playerctl play-pause"; }
     XF86AudioStop         allow-when-locked=true { spawn-sh "playerctl stop"; }
     XF86AudioPrev         allow-when-locked=true { spawn-sh "playerctl previous"; }
     XF86AudioNext         allow-when-locked=true { spawn-sh "playerctl next"; }
-    XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "set" "5%+"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "set" "5%-"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn-sh "/usr/bin/brightnessctl set 5%+; __HOME__/.config/niri/osd-notify.sh brightness"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "/usr/bin/brightnessctl set 5%-; __HOME__/.config/niri/osd-notify.sh brightness"; }
 
     // ─── Escape hatch for remote-desktop apps ─────────────────────
     Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
