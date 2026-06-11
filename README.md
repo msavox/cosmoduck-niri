@@ -105,6 +105,10 @@ You can rebuild the `.deb` yourself afterwards with
 
 ![app-grid](docs/screenshots/15-app-grid.png)
 
+**Volume / brightness OSD** — macOS-style HUD on the volume, brightness and mic-mute keys, floating above the dock (click-through, auto-hides):
+
+![osd](docs/screenshots/16-osd.png)
+
 **Keyboard cheatsheet** (F1) — auto-built from your keybinds, shown at first login:
 
 ![cheatsheet](docs/screenshots/05-cheatsheet.png)
