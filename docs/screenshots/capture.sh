@@ -48,6 +48,8 @@ shot 10-swaylock.png      f "Lock screen (duck in the ring). Tricky to self-capt
 shot 11-light.png         f "Switch to the light theme (cosmoduck-Light) and grab the desktop again."
 shot 12-plymouth.png      x "Boot splash — can't be grabbed live (plymouthd contends the DRM with niri). Shoot the real boot (phone photo) or compose a static mockup from /usr/share/plymouth/themes/cosmoduck/ assets. Skipped here by default."
 shot 13-dock-manager.png  s "Open the dock manager (right-click the dock -> manage, or run dock-manager.py). Show the app list + the dock-height slider. Region over the window."
+shot 17-audio-menu.png    s "Click the volume icon in the top bar -> audio device switcher. Region over the menu (include the bar above it). Pixelate the SSID."
+shot 18-clipboard.png     s "Press Mod+Ctrl+V for the clipboard history menu. Seed innocuous entries first (or use a throwaway HOME) - NEVER shoot your real history. Region over the menu + dock."
 
 echo
 echo "Done. Review every PNG, then they render in README.md."

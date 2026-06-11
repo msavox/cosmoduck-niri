@@ -11,7 +11,7 @@
 
   "modules-left":   ["custom/ubuntu", "custom/niri-workspaces", "custom/close-window", "custom/niri-window"],
   "modules-center": ["clock"],
-  "modules-right":  ["custom/layout", "custom/tray-toggle", "custom/notification", "pulseaudio", "bluetooth", "network", "cpu", "memory", "custom/conky", "custom/lid", "battery", "custom/power"],
+  "modules-right":  ["custom/layout", "custom/tray-toggle", "custom/notification", "custom/clipboard", "pulseaudio", "bluetooth", "custom/headset", "network", "cpu", "memory", "custom/conky", "custom/lid", "battery", "custom/power"],
 
   "custom/app-menu": {
     "format": "󱗼",
@@ -120,11 +120,25 @@
     "show-passive-items": true
   },
 
+  "custom/clipboard": {
+    "format": "\uf0ea",
+    "tooltip-format": "Clipboard history (Mod+Ctrl+V)",
+    "on-click": "/usr/bin/python3 __HOME__/.config/waybar/clip-menu.py bar"
+  },
+
+  // Battery of connected bluetooth devices (org.bluez.Battery1; headsets need
+  // Experimental=true in /etc/bluetooth/main.conf). Hides itself when empty.
+  "custom/headset": {
+    "exec": "/usr/bin/python3 __HOME__/.config/waybar/bt-battery.py --watch",
+    "return-type": "json",
+    "tooltip": true
+  },
+
   "pulseaudio": {
     "format": "{icon}  {volume}%",
     "format-muted": "󰝟  muted",
     "format-icons": ["󰕿", "󰖀", "󰕾"],
-    "on-click":        "gnome-control-center sound",
+    "on-click":        "/usr/bin/python3 __HOME__/.config/waybar/audio-menu.py",
     "on-click-right":  "pavucontrol",
     "on-click-middle": "__HOME__/.config/waybar/volume-slider.sh",
     "on-scroll-up":    "/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ +5%",

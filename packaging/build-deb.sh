@@ -18,7 +18,7 @@ RICE="$REPO/rice"
 ROOT="$HERE/build/pkgroot"
 PREFIX="${PREFIX:-/usr/local}"
 PKG="cosmoduck-niri"
-VER="1.4.0"
+VER="1.5.0"
 ARCH="amd64"
 
 echo ">> reset staging"
@@ -32,7 +32,7 @@ cp -a "$STATIC/." "$ROOT/"
 # ── 1. compiled binaries -> /usr/local (stripped copies) ─────────────
 echo ">> binaries (from $PREFIX, built by ../build/build-all.sh)"
 install -d "$ROOT/usr/local/bin" "$ROOT/usr/local/lib/x86_64-linux-gnu"
-BINS="niri niri-session Xwayland swaylock swaylock-effects swaync swaync-client di-edid-decode xwayland-satellite nwg-dock"
+BINS="niri niri-session Xwayland swaylock swaylock-effects swaync swaync-client di-edid-decode xwayland-satellite nwg-dock cliphist"
 for b in $BINS; do
   [ -f "$PREFIX/bin/$b" ] || { echo "MISSING: $PREFIX/bin/$b — run ../build/build-all.sh first" >&2; exit 1; }
   install -m755 "$PREFIX/bin/$b" "$ROOT/usr/local/bin/$b"

@@ -1,11 +1,11 @@
 Package: cosmoduck-niri
-Version: 1.4.0
+Version: 1.5.0
 Section: x11
 Priority: optional
 Architecture: amd64
 Maintainer: Matteo Savoia <matteo.savoia@gmail.com>
 Installed-Size: 0
-Depends: conky-all, waybar, swaybg, jq, python3, python3-gi, python3-gi-cairo, python3-cairo, python3-xlib, gir1.2-gtk-3.0, gir1.2-gtklayershell-0.1, gnome-control-center, gnome-settings-daemon, network-manager, network-manager-gnome, bluez, gnome-bluetooth, dconf-cli, gsettings-desktop-schemas, policykit-1-gnome, brightnessctl, playerctl, pulseaudio-utils, zenity, imagemagick, curl, libpam0g, libseat1, libinput10, libgbm1, libegl1, libxkbcommon0, xdg-desktop-portal, xdg-desktop-portal-wlr, pipewire, pipewire-pulse, wireplumber, slurp, wofi, plymouth, plymouth-themes, initramfs-tools
+Depends: conky-all, waybar, swaybg, jq, python3, python3-gi, python3-gi-cairo, python3-cairo, python3-xlib, gir1.2-gtk-3.0, gir1.2-gtklayershell-0.1, gnome-control-center, gnome-settings-daemon, network-manager, network-manager-gnome, bluez, gnome-bluetooth, dconf-cli, gsettings-desktop-schemas, policykit-1-gnome, brightnessctl, playerctl, pulseaudio-utils, wl-clipboard, zenity, imagemagick, curl, libpam0g, libseat1, libinput10, libgbm1, libegl1, libxkbcommon0, xdg-desktop-portal, xdg-desktop-portal-wlr, pipewire, pipewire-pulse, wireplumber, slurp, wofi, plymouth, plymouth-themes, initramfs-tools
 Recommends: ulauncher, nautilus, gnome-terminal, gnome-calculator, gnome-text-editor | gedit, gnome-software, fonts-inter
 Description: Cosmoduck niri desktop (Ubuntu 22.04)
  Complete niri Wayland desktop setup for Ubuntu 22.04 (jammy): the niri

@@ -114,6 +114,10 @@ spawn-at-startup "/usr/bin/python3" "__HOME__/.config/waybar/notif-count.py" "da
 spawn-sh-at-startup "exec /usr/bin/python3 __HOME__/.config/waybar/dock-autopin.py 2>>__HOME__/.config/waybar/dock-autopin.err"
 // OSD volume/luminosità stile macOS (card bottom-center, vedi osd.py)
 spawn-sh-at-startup "exec /usr/bin/python3 __HOME__/.config/niri/osd.py 2>>/tmp/cosmoduck-osd.err"
+// Clipboard history (cliphist): collected in the background, menu on Mod+Ctrl+V.
+// Explicit XDG_CACHE_HOME: it is empty in niri's env and cliphist would try /cliphist.
+spawn-sh-at-startup "export XDG_CACHE_HOME=__HOME__/.cache; exec /usr/bin/wl-paste --type text --watch cliphist store"
+spawn-sh-at-startup "export XDG_CACHE_HOME=__HOME__/.cache; exec /usr/bin/wl-paste --type image --watch cliphist store"
 spawn-sh-at-startup "__HOME__/.config/niri/gnome-wallpaper-sync.sh"
 spawn-at-startup "/usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1"
 spawn-at-startup "ulauncher" "--hide-window"
@@ -244,6 +248,21 @@ window-rule {
     open-floating true
 }
 
+// WinApps Office (RemoteApp via FreeRDP3): dialogs are standalone RAIL
+// windows and FreeRDP bug #4934 makes them oscillate/collapse. The main
+// window is stable (title "<doc> - Excel"); the "bare" dialogs have the exact
+// title "Microsoft Word/Excel/...". Pin them to a constant size (min==max)
+// as floating: niri keeps the geometry fixed -> FreeRDP always receives the
+// same one -> the resize loop stops.
+window-rule {
+    match title=r#"^Microsoft (Word|Excel|PowerPoint|Project|Outlook)$"#
+    open-floating true
+    min-width 520
+    max-width 520
+    min-height 400
+    max-height 400
+}
+
 // ════════ Shortcuts ════════════════════════════════════════════════
 binds {
     // ─── Cheatsheet ───────────────────────────────────────────────
@@ -271,6 +290,7 @@ binds {
     Mod+V       hotkey-overlay-title="Toggle floating/tiling"         { toggle-window-floating; }
     Mod+Shift+V hotkey-overlay-title="Switch focus between floating and tiling" { switch-focus-between-floating-and-tiling; }
     Mod+W       hotkey-overlay-title="Toggle tabbed display in column" { toggle-column-tabbed-display; }
+    Mod+Ctrl+V  hotkey-overlay-title="Clipboard history" { spawn "/usr/bin/python3" "__HOME__/.config/waybar/clip-menu.py"; }
     Mod+Space   hotkey-overlay-title="Cycle keyboard layout"          { spawn "niri" "msg" "action" "switch-layout" "next"; }
 
     // ─── Window focus ─────────────────────────────────────────────
@@ -374,10 +394,15 @@ binds {
     XF86AudioLowerVolume  allow-when-locked=true { spawn-sh "/usr/bin/pactl set-sink-volume @DEFAULT_SINK@ -5%; __HOME__/.config/niri/osd-notify.sh volume"; }
     XF86AudioMute         allow-when-locked=true { spawn-sh "/usr/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle; __HOME__/.config/niri/osd-notify.sh mute"; }
     XF86AudioMicMute      allow-when-locked=true { spawn-sh "/usr/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle; __HOME__/.config/niri/osd-notify.sh mic"; }
-    XF86AudioPlay         allow-when-locked=true { spawn-sh "playerctl play-pause"; }
-    XF86AudioStop         allow-when-locked=true { spawn-sh "playerctl stop"; }
-    XF86AudioPrev         allow-when-locked=true { spawn-sh "playerctl previous"; }
-    XF86AudioNext         allow-when-locked=true { spawn-sh "playerctl next"; }
+    // BT headphones (e.g. WH-1000XM5) send via AVRCP/uinput KEY_PLAYCD/KEY_PAUSECD
+    // (= separate XF86AudioPlay/Pause) plus fast-forward/rewind, not just play-pause.
+    XF86AudioPlay         allow-when-locked=true { spawn-sh "/usr/bin/playerctl play-pause; __HOME__/.config/niri/osd-notify.sh playpause"; }
+    XF86AudioPause        allow-when-locked=true { spawn-sh "/usr/bin/playerctl play-pause; __HOME__/.config/niri/osd-notify.sh playpause"; }
+    XF86AudioStop         allow-when-locked=true { spawn-sh "/usr/bin/playerctl stop; __HOME__/.config/niri/osd-notify.sh stop"; }
+    XF86AudioPrev         allow-when-locked=true { spawn-sh "/usr/bin/playerctl previous; __HOME__/.config/niri/osd-notify.sh prev"; }
+    XF86AudioNext         allow-when-locked=true { spawn-sh "/usr/bin/playerctl next; __HOME__/.config/niri/osd-notify.sh next"; }
+    XF86AudioRewind       allow-when-locked=true { spawn-sh "/usr/bin/playerctl position 5-; __HOME__/.config/niri/osd-notify.sh rwd"; }
+    XF86AudioForward      allow-when-locked=true { spawn-sh "/usr/bin/playerctl position 5+; __HOME__/.config/niri/osd-notify.sh fwd"; }
     XF86MonBrightnessUp   allow-when-locked=true { spawn-sh "/usr/bin/brightnessctl set 5%+; __HOME__/.config/niri/osd-notify.sh brightness"; }
     XF86MonBrightnessDown allow-when-locked=true { spawn-sh "/usr/bin/brightnessctl set 5%-; __HOME__/.config/niri/osd-notify.sh brightness"; }
 
