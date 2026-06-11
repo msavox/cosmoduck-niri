@@ -263,6 +263,13 @@ class AppGrid:
                 return
 
     def _on_press(self, _w, ev):
+        # A press on a descendant with its own GdkWindow (flowbox, search)
+        # bubbles up here with ev.x/ev.y relative to THAT window, so the
+        # allocation test below would wrongly read it as "outside the card"
+        # and close without launching. Only trust the coordinates when the
+        # press hit the toplevel's own window (backdrop or card padding).
+        if Gtk.get_event_widget(ev) is not self.win:
+            return False
         a = self._card.get_allocation()
         if not (a.x <= ev.x <= a.x + a.width and a.y <= ev.y <= a.y + a.height):
             self._close()

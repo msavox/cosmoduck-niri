@@ -3,10 +3,11 @@
 # then restart the waybar dock.
 #
 # Generated layout:
-#   modules-center = [ <pre-taskbar...>, wlr/taskbar, <post-taskbar...> ]
-# Entries with "post_taskbar": true go after the taskbar (e.g. settings, trash),
-# all others before. Backward-compat fallback: if none has post_taskbar,
-# the last entry is treated as post.
+#   modules-center = [ <pinned...>, <auto-slot1..N>, <post...> ]
+# Entries with "post_taskbar": true go after the auto-pin slots (e.g. settings,
+# trash), all others before. Backward-compat fallback: if none has
+# post_taskbar, the last entry is treated as post. The auto-slots replace
+# wlr/taskbar: dock-autopin.py assigns unpinned running apps to them.
 set -euo pipefail
 
 cfg="$HOME/.config/waybar"
@@ -18,6 +19,14 @@ out_css="$cfg/dock-pinned.css"
 
 count=$(jq 'length' "$apps")
 (( count > 0 )) || { echo "dock-apps.json empty" >&2; exit 1; }
+
+# Auto-pin slots (dock-autopin.py): SLOTS permanent custom modules between
+# the pinned icons and the post-taskbar ones. A vacant slot hides itself
+# (dock-status.sh returns empty text); the daemon assigns unpinned running
+# apps to slots by rewriting dock-apps-auto.json ONLY — no dock restart, so
+# windows never re-layout. Icons come from per-icon CSS classes pre-generated
+# below for every installed .desktop app. This replaces wlr/taskbar.
+SLOTS=16
 
 # ── notification-count badge SVGs (regenerated if the folder is missing) ──
 # Solid dark-blue pill with a white number; values 1..9 and "9+".
@@ -56,15 +65,16 @@ if (( ${#post_ids[@]} == 0 )); then
 fi
 
 # ── modules-center array ─────────────────────────────────────────────
+slot_ids=()
+for ((s=1; s<=SLOTS; s++)); do slot_ids+=("auto-slot${s}"); done
+
 center='['
 first=1
-for id in "${pinned_ids[@]}"; do
+for id in "${pinned_ids[@]}" "${slot_ids[@]}"; do
   (( first )) || center+=","
   center+="\"custom/$id\""
   first=0
 done
-(( first )) || center+=","
-center+='"wlr/taskbar"'
 for id in "${post_ids[@]}"; do
   center+=",\"custom/$id\""
 done
@@ -72,8 +82,8 @@ center+=']'
 
 # ── per-app module blocks (custom/<id>) ──────────────────────────────
 # A single jq builds the object with ALL modules (instead of one per app).
-modules_json=$(jq -c '
-  [ .[].id
+modules_json=$(jq -c --argjson slots "$SLOTS" '
+  [ (.[].id), ("auto-slot" + (range(1; $slots + 1) | tostring))
     | { ("custom/"+.): {
           "exec": ("__HOME__/.config/waybar/dock-status.sh " + .),
           "interval": 1,
@@ -83,9 +93,6 @@ modules_json=$(jq -c '
           "on-click-right": ("/usr/bin/python3 __HOME__/.config/waybar/dock-menu.py " + .)
         } }
   ] | add' "$apps")
-
-# ── wlr/taskbar ignore-list: all app_ids declared in the pinned entries ──
-ignore_json=$(jq -c '[.[].app_ids // [] | .[]] | unique' "$apps")
 
 # ── dock sizes derived from height (slider in dock-manager) ───────────
 # Source: dock-config.json {"height": N}. Everything scales proportionally
@@ -133,9 +140,7 @@ seg_bar() {
   echo '// Source: dock-apps.json'
   jq -n \
     --argjson center "$center" \
-    --argjson ignore "$ignore_json" \
     --argjson height "$H" \
-    --argjson icon_size "$icon_size" \
     --argjson mods "$modules_json" \
     '{
       "layer": "top",
@@ -147,32 +152,51 @@ seg_bar() {
       "margin-right": 6,
       "modules-left": [],
       "modules-center": $center,
-      "modules-right": [],
-      "wlr/taskbar": {
-        "format": "{icon}",
-        "icon-size": $icon_size,
-        "tooltip-format": "{title}",
-        "on-click": "activate",
-        "on-click-middle": "close",
-        "ignore-list": $ignore
-      }
+      "modules-right": []
     } * $mods'
 } > "$out_json"
 
-# ── resolve icons in a SINGLE pass (icon_name -> file) ───────────────
+# ── resolve icons in a SINGLE pass (icon_name -> file, css class) ─────
 # This used to launch python+Gtk for EVERY app (slow: ~one interpreter
-# start per app = several seconds). Here a single process resolves them all.
-declare -A ICON_PATHS
-while IFS=$'\t' read -r in_name in_path; do
-  [[ -n "$in_name" ]] && ICON_PATHS["$in_name"]="$in_path"
+# start per app = several seconds). Here a single process resolves them all:
+# the pinned icon_names from stdin PLUS the Icon= of every installed
+# .desktop app (for the auto-pin slots, whose icon can be any app's).
+# Output: name <tab> path <tab> css-class. The name->class map is also
+# written to auto-icon-classes.json — dock-autopin.py reads it to tag a
+# slot with the right class (apps installed later fall back to icon-fallback
+# until the next dock-gen run).
+declare -A ICON_PATHS ICON_CLASS
+while IFS=$'\t' read -r in_name in_path in_class; do
+  [[ -n "$in_name" ]] && ICON_PATHS["$in_name"]="$in_path" && ICON_CLASS["$in_name"]="$in_class"
 done < <(jq -r '.[].icon_name // empty' "$apps" | sort -u | python3 -c '
-import sys, gi
+import json, re, sys, gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, Gio
 theme = Gtk.IconTheme.get_default()
-for name in (l.strip() for l in sys.stdin if l.strip()):
+names = {l.strip() for l in sys.stdin if l.strip()}
+for ai in Gio.AppInfo.get_all():
+    if isinstance(ai, Gio.DesktopAppInfo) and ai.should_show():
+        ic = ai.get_string("Icon")
+        if ic:
+            names.add(ic)
+names.add("application-x-executable")   # icon-fallback source
+def resolve(name):
+    if name.startswith("/"):           # Icon= with an absolute path
+        return name
     info = theme.lookup_icon(name, 48, 0)
-    print(name + "\t" + (info.get_filename() if info else ""))
+    return info.get_filename() if info else ""
+classes = {}
+for name in sorted(names):
+    path = resolve(name)
+    cls = "icon-" + (re.sub(r"[^a-zA-Z0-9_-]+", "-", name).strip("-") or "x")
+    if path:
+        classes[name] = cls
+    print(name + "\t" + path + "\t" + cls)
+import os
+out = os.path.expanduser("~/.config/waybar/auto-icon-classes.json")
+with open(out + ".tmp", "w") as f:
+    json.dump(classes, f, indent=1, sort_keys=True)
+os.replace(out + ".tmp", out)
 ')
 
 # ── dock-pinned.css: common rules + icon from GTK theme + color ──────
@@ -182,7 +206,7 @@ for name in (l.strip() for l in sys.stdin if l.strip()):
   # Common rules applied to ALL modules (pinned + post-taskbar).
   # Single selector = CSV list of IDs, in array order.
   joined=""
-  for id in "${ids[@]}"; do
+  for id in "${ids[@]}" "${slot_ids[@]}"; do
     [[ -n "$joined" ]] && joined+=","
     joined+="#custom-${id}"
   done
@@ -202,7 +226,7 @@ for name in (l.strip() for l in sys.stdin if l.strip()):
 
   hover=""
   running=""
-  for id in "${ids[@]}"; do
+  for id in "${ids[@]}" "${slot_ids[@]}"; do
     [[ -n "$hover" ]] && hover+=","
     hover+="#custom-${id}:hover"
     [[ -n "$running" ]] && running+=","
@@ -264,6 +288,35 @@ for name in (l.strip() for l in sys.stdin if l.strip()):
       done
     fi
   done < <(jq -r '.[] | "\(.id)\t\(.color)\t\(.icon_name // "")"' "$apps")
+
+  # ── auto-pin slot rules: one per UNIQUE resolved icon, all slots in the
+  # selector list. An occupied slot is by definition a running app, so the
+  # icon and the single running bar are layered in the same rule (no instN
+  # split for slots: the bar stays solid). Class set by dock-status.sh from
+  # the slot entry's icon_class field (manifest: auto-icon-classes.json).
+  bar="linear-gradient(#d6edff, #d6edff)"
+  isize="${bg_size}px ${bg_size}px"
+  for icon_name in "${!ICON_PATHS[@]}"; do
+    icon_path="${ICON_PATHS[$icon_name]}"
+    [[ -n "$icon_path" ]] || continue
+    cls="${ICON_CLASS[$icon_name]}"
+    sel=""
+    for sid in "${slot_ids[@]}"; do
+      [[ -n "$sel" ]] && sel+=","
+      sel+="#custom-${sid}.${cls}"
+    done
+    echo "${sel} { background-image: url(\"${icon_path}\"), ${bar}; background-size: ${isize}, 50% 3px; background-position: center 30%, center bottom; background-repeat: no-repeat, no-repeat; }"
+    # instN variants: bar split into N segments, same as the pinned icons
+    # (class emitted by dock-status.sh; capped at MAXSEG).
+    for ((s=2; s<=MAXSEG; s++)); do
+      sel=""
+      for sid in "${slot_ids[@]}"; do
+        [[ -n "$sel" ]] && sel+=","
+        sel+="#custom-${sid}.${cls}.inst${s}"
+      done
+      echo "${sel} { background-image: url(\"${icon_path}\"), ${SEGBAR[$s]}; background-size: ${isize}, 50% 3px; background-position: center 30%, center bottom; background-repeat: no-repeat, no-repeat; }"
+    done
+  done
 } > "$out_css"
 
 # ── restart dock waybar ──────────────────────────────────────────────
