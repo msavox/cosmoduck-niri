@@ -18,6 +18,29 @@ case "$1" in
       echo "auth include login" > /etc/pam.d/swaylock
     fi
 
+    # bluez 5.86 backport (see build/10-bluez.sh): point bluetooth.service at
+    # the bundled daemon and enable Experimental (D-Bus battery reporting).
+    # jammy's bluez 5.64 with Experimental=true never re-enables passive
+    # scanning, so bonded devices never auto-reconnect — the reason we ship
+    # 5.86. The jammy bluez package stays: obexd, udev rules and the D-Bus
+    # policy still come from it.
+    if [ -x /usr/local/libexec/bluetooth/bluetoothd ]; then
+      mkdir -p /etc/systemd/system/bluetooth.service.d
+      printf '[Service]\nExecStart=\nExecStart=/usr/local/libexec/bluetooth/bluetoothd\n' \
+        > /etc/systemd/system/bluetooth.service.d/usr-local.conf
+      if [ -f /etc/bluetooth/main.conf ]; then
+        if grep -q '^Experimental' /etc/bluetooth/main.conf; then
+          sed -i 's/^Experimental.*/Experimental = true/' /etc/bluetooth/main.conf
+        elif grep -q '^\[General\]' /etc/bluetooth/main.conf; then
+          sed -i '/^\[General\]/a Experimental = true' /etc/bluetooth/main.conf
+        else
+          printf '[General]\nExperimental = true\n' >> /etc/bluetooth/main.conf
+        fi
+      fi
+      systemctl daemon-reload 2>/dev/null || true
+      systemctl restart bluetooth 2>/dev/null || true
+    fi
+
     # refresh caches (best-effort)
     fc-cache -f >/dev/null 2>&1 || true
     update-desktop-database -q /usr/share/applications 2>/dev/null || true

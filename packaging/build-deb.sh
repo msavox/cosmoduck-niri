@@ -18,7 +18,7 @@ RICE="$REPO/rice"
 ROOT="$HERE/build/pkgroot"
 PREFIX="${PREFIX:-/usr/local}"
 PKG="cosmoduck-niri"
-VER="1.5.0"
+VER="1.6.0"
 ARCH="amd64"
 
 echo ">> reset staging"
@@ -32,7 +32,7 @@ cp -a "$STATIC/." "$ROOT/"
 # ── 1. compiled binaries -> /usr/local (stripped copies) ─────────────
 echo ">> binaries (from $PREFIX, built by ../build/build-all.sh)"
 install -d "$ROOT/usr/local/bin" "$ROOT/usr/local/lib/x86_64-linux-gnu"
-BINS="niri niri-session Xwayland swaylock swaylock-effects swaync swaync-client di-edid-decode xwayland-satellite nwg-dock cliphist"
+BINS="niri niri-session Xwayland swaylock swaylock-effects swaync swaync-client di-edid-decode xwayland-satellite nwg-dock cliphist bluetoothctl"
 for b in $BINS; do
   [ -f "$PREFIX/bin/$b" ] || { echo "MISSING: $PREFIX/bin/$b — run ../build/build-all.sh first" >&2; exit 1; }
   install -m755 "$PREFIX/bin/$b" "$ROOT/usr/local/bin/$b"
@@ -50,6 +50,15 @@ fi
 # libwayland-client 1.23.1: fixes the Firefox scroll crash under niri. Postinst's
 # ld.so.conf.d entry makes it shadow jammy's 1.20 (ABI-compatible, soname .0).
 cp -a "$PREFIX/lib/x86_64-linux-gnu/libwayland-client.so"* "$ROOT/usr/local/lib/x86_64-linux-gnu/"
+
+# bluez 5.86 daemon (see build/10-bluez.sh): jammy's 5.64 never re-enables
+# passive scanning with Experimental=true, so bonded BT devices don't
+# auto-reconnect. Postinst points bluetooth.service at this binary.
+echo ">> bluetoothd (bluez 5.86 backport)"
+[ -f "$PREFIX/libexec/bluetooth/bluetoothd" ] || { echo "MISSING: $PREFIX/libexec/bluetooth/bluetoothd — run ../build/10-bluez.sh first" >&2; exit 1; }
+install -d "$ROOT/usr/local/libexec/bluetooth"
+install -m755 "$PREFIX/libexec/bluetooth/bluetoothd" "$ROOT/usr/local/libexec/bluetooth/bluetoothd"
+strip --strip-unneeded "$ROOT/usr/local/libexec/bluetooth/bluetoothd" 2>/dev/null || true
 
 # ── 2. session / systemd / portal files ──────────────────────────────
 echo ">> session files"
@@ -98,6 +107,7 @@ setfacl -bR "$ROOT" 2>/dev/null || true
 find "$ROOT" -type d -exec chmod 0755 {} +
 find "$ROOT" -type f -exec chmod 0644 {} +
 find "$ROOT/usr/local/bin" -type f -exec chmod 0755 {} +
+chmod 0755 "$ROOT/usr/local/libexec/bluetooth/bluetoothd"
 chmod 0755 "$ROOT/usr/bin/cosmoduck-niri-setup"
 # Plymouth kernel-log feeders (systemd-phase binary + initramfs hook) are executable
 [ -f "$ROOT/usr/bin/cosmoduck-bootlog" ] && chmod 0755 "$ROOT/usr/bin/cosmoduck-bootlog"

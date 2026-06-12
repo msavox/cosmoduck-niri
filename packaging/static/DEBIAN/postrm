@@ -6,6 +6,19 @@ case "$1" in
     rm -f /etc/ld.so.conf.d/cosmoduck-niri.conf
     ldconfig 2>/dev/null || true
 
+    # revert bluetooth.service to jammy's stock bluetoothd (the bundled 5.86
+    # binary is gone now). Experimental=true is left in main.conf: harmless to
+    # flip back by hand, but on 5.64 it re-breaks auto-reconnect, so warn.
+    if [ -f /etc/systemd/system/bluetooth.service.d/usr-local.conf ]; then
+      rm -f /etc/systemd/system/bluetooth.service.d/usr-local.conf
+      rmdir /etc/systemd/system/bluetooth.service.d 2>/dev/null || true
+      systemctl daemon-reload 2>/dev/null || true
+      systemctl restart bluetooth 2>/dev/null || true
+      echo " bluetooth.service reverted to jammy's bluez 5.64."
+      echo " NOTE: Experimental=true is still set in /etc/bluetooth/main.conf;"
+      echo " on 5.64 it breaks BT auto-reconnect — set it to false if you hit that."
+    fi
+
     # de-register the Plymouth theme (update-alternatives reverts default.plymouth
     # to the next-highest, e.g. Ubuntu's System8) and rebuild the initramfs so the
     # cosmoduck splash + its early kernel-log feeder are dropped from it.
