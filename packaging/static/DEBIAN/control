@@ -1,5 +1,5 @@
 Package: cosmoduck-niri
-Version: 1.5.0
+Version: 1.6.0
 Section: x11
 Priority: optional
 Architecture: amd64
@@ -11,7 +11,8 @@ Description: Cosmoduck niri desktop (Ubuntu 22.04)
  Complete niri Wayland desktop setup for Ubuntu 22.04 (jammy): the niri
  compositor and supporting tools compiled from source (niri, Xwayland,
  xwayland-satellite, swaylock, swaync, libdisplay-info, libwayland-client
- 1.23.1 for the Firefox scroll fix), the Cosmoduck GTK
+ 1.23.1 for the Firefox scroll fix, bluez 5.86 to fix Bluetooth
+ auto-reconnect with battery reporting enabled), the Cosmoduck GTK
  theme, a waybar top bar + macOS-style dock, swaync notifications, the
  conky Cosmoduck widget with an X11->layer-shell bridge to run it under
  niri, plus waybar toggles for the conky widget and lid keep-awake.

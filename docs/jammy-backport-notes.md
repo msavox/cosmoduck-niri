@@ -70,6 +70,26 @@ niri reuses the GNOME stack for Wi-Fi/Bluetooth/background. Notes:
 - Wallpaper sync reads the live value with `dconf read` (not `gsettings`, which a
   keyfile GIO backend can shadow).
 
+### Bluetooth devices never auto-reconnect (bluez 5.64 + `Experimental`)
+The bar's bt-battery module needs `Experimental = true` in
+`/etc/bluetooth/main.conf` (it reads the D-Bus `org.bluez.Battery1` interface;
+for headsets the percentage arrives via PipeWire's BatteryProvider, which is
+gated behind that flag). But on jammy's bluez **5.64** the flag is poison: the
+adv-monitor manager takes the MSFT-offload path and passive scanning is never
+(re)enabled. Verified with `btmon`: on startup the kernel gets the bonded
+device into the LE accept list with auto-connect action 0x02, but `LE Set
+Extended Scan Enable` is never issued — the controller is deaf, so bonded
+mice/headphones **never reconnect on their own** and every power cycle needs a
+manual connect. With the flag off reconnection works, but headset battery
+reporting is gone — a strict either/or on 5.64.
+
+bluez **5.86** (built by `build/10-bluez.sh`, shipped in the `.deb`) fixes the
+coexistence: `bluetoothd` installs under `/usr/local/libexec/bluetooth` and a
+systemd drop-in (`/etc/systemd/system/bluetooth.service.d/usr-local.conf`)
+points `bluetooth.service` at it. The jammy bluez package stays installed
+(obexd, udev rules, D-Bus policy). Rollback: delete the drop-in,
+`systemctl daemon-reload && systemctl restart bluetooth`.
+
 ## Why `/usr/local`?
 Everything installs under `/usr/local` to match how it was compiled and to avoid
 fighting dpkg over `/usr`. It's intentional and jammy-specific. On 24.04+ you

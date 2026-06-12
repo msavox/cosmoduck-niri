@@ -25,6 +25,7 @@ $SUDO apt-get install -y \
   valac libgtk-3-dev libgtk-layer-shell-dev libgirepository1.0-dev \
   libhandy-1-dev libdbusmenu-gtk3-dev \
   golang-go \
+  libtool libdbus-1-dev libglib2.0-dev libreadline-dev \
   || die "apt install failed — see the package name above"
 
 log "rust toolchain"
